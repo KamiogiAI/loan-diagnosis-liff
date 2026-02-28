@@ -62,7 +62,10 @@
                 <!-- フィルター・アクション -->
                 <div class="toolbar">
                     <div class="filters">
-                        <input type="text" id="filter-search" class="filter-input search-input" placeholder="🔍 名前・電話番号で検索">
+                        <div class="search-box">
+                            <input type="text" id="filter-search" class="filter-input search-input" placeholder="名前・電話番号で検索">
+                            <button id="btn-search" class="btn-search">検索</button>
+                        </div>
                         <select id="filter-status" class="filter-select">
                             <option value="">すべてのステータス</option>
                             <option value="未連絡">未連絡</option>

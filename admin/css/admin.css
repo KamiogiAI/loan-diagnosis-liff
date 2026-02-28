@@ -230,8 +230,32 @@ body {
     border-color: var(--primary-color);
 }
 
+.search-box {
+    display: flex;
+    gap: 0;
+}
+
 .search-input {
-    min-width: 220px;
+    min-width: 200px;
+    border-radius: 8px 0 0 8px;
+    border-right: none;
+}
+
+.btn-search {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--white);
+    background: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.btn-search:hover {
+    background: var(--primary-dark);
 }
 
 .actions {
