@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理画面 - 住宅ローン診断</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="app">
+        <!-- ログイン画面 -->
+        <div id="login-screen" class="login-screen">
+            <div class="login-card">
+                <h1>住宅ローン診断<br>管理画面</h1>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">ユーザー名</label>
+                        <input type="text" id="username" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">パスワード</label>
+                        <input type="password" id="password" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn-login">ログイン</button>
+                    <p id="login-error" class="error-message hidden"></p>
+                </form>
+            </div>
+        </div>
+
+        <!-- メイン画面 -->
+        <div id="main-screen" class="main-screen hidden">
+            <!-- ヘッダー -->
+            <header class="header">
+                <div class="header-inner">
+                    <h1>住宅ローン診断 管理画面</h1>
+                    <button id="btn-logout" class="btn-logout">ログアウト</button>
+                </div>
+            </header>
+
+            <!-- コンテンツ -->
+            <main class="content">
+                <!-- 統計カード -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">総診断数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-today">0</div>
+                        <div class="stat-label">本日</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-pending">0</div>
+                        <div class="stat-label">未連絡</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-contacted">0</div>
+                        <div class="stat-label">連絡済み</div>
+                    </div>
+                </div>
+
+                <!-- フィルター・アクション -->
+                <div class="toolbar">
+                    <div class="filters">
+                        <select id="filter-status" class="filter-select">
+                            <option value="">すべてのステータス</option>
+                            <option value="未連絡">未連絡</option>
+                            <option value="連絡済み">連絡済み</option>
+                            <option value="面談予約">面談予約</option>
+                            <option value="成約">成約</option>
+                            <option value="見送り">見送り</option>
+                        </select>
+                        <input type="date" id="filter-date" class="filter-input" placeholder="日付で絞り込み">
+                    </div>
+                    <div class="actions">
+                        <button id="btn-refresh" class="btn-action">
+                            <span class="icon">↻</span> 更新
+                        </button>
+                        <button id="btn-export" class="btn-action btn-export">
+                            <span class="icon">↓</span> CSVエクスポート
+                        </button>
+                    </div>
+                </div>
+
+                <!-- データテーブル -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>日時</th>
+                                <th>ユーザー名</th>
+                                <th>年収</th>
+                                <th>年齢</th>
+                                <th>借入可能額</th>
+                                <th>ステータス</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- データが入る -->
+                        </tbody>
+                    </table>
+                    <div id="empty-state" class="empty-state hidden">
+                        <p>データがありません</p>
+                    </div>
+                    <div id="loading-state" class="loading-state">
+                        <div class="spinner"></div>
+                        <p>読み込み中...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 詳細モーダル -->
+        <div id="detail-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>診断詳細</h2>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>診断日時</label>
+                            <span id="detail-date">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>LINE表示名</label>
+                            <span id="detail-name">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>LINE UID</label>
+                            <span id="detail-uid" class="uid">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>年収</label>
+                            <span id="detail-income">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>年齢</label>
+                            <span id="detail-age">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>雇用形態</label>
+                            <span id="detail-employment">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>他社借入（合計）</label>
+                            <span id="detail-debt">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>他社借入（月返済）</label>
+                            <span id="detail-monthly">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>勤続年数</label>
+                            <span id="detail-years">-</span>
+                        </div>
+                        <div class="detail-item highlight">
+                            <label>借入可能額</label>
+                            <span id="detail-result">-</span>
+                        </div>
+                    </div>
+                    <div class="detail-status">
+                        <label>ステータス</label>
+                        <select id="detail-status-select" class="status-select">
+                            <option value="未連絡">未連絡</option>
+                            <option value="連絡済み">連絡済み</option>
+                            <option value="面談予約">面談予約</option>
+                            <option value="成約">成約</option>
+                            <option value="見送り">見送り</option>
+                        </select>
+                    </div>
+                    <div class="detail-memo">
+                        <label>メモ</label>
+                        <textarea id="detail-memo" placeholder="対応内容などをメモ"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-save" class="btn-primary">保存</button>
+                    <button id="btn-cancel" class="btn-secondary">キャンセル</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>
