@@ -165,7 +165,7 @@ function getFormData() {
     const age = parseInt(document.getElementById('age').value);
     const employmentType = document.querySelector('input[name="employment"]:checked').value;
     const totalDebt = parseInt(document.getElementById('total-debt').value || 0) * 10000; // 万円→円
-    const monthlyPayment = parseInt(document.getElementById('monthly-payment').value || 0);
+    const monthlyPayment = parseInt(document.getElementById('monthly-payment').value || 0) * 10000; // 万円→円
     const yearsEmployed = parseInt(document.getElementById('years-employed').value);
 
     return {
