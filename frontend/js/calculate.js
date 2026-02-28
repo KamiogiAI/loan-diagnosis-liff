@@ -55,7 +55,7 @@ function calculateBorrowableAmount(income, age, monthlyPayment) {
     if (loanPeriod < 15) {
         return {
             success: false,
-            error: '返済期間が短すぎます',
+            error: '65歳以上は返済期間が短くなるため診断できません',
             loanPeriod: loanPeriod
         };
     }
