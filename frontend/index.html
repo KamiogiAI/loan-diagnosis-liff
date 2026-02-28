@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>住宅ローン簡易診断</title>
     <link rel="stylesheet" href="css/style.css">
     <!-- LIFF SDK -->
@@ -33,7 +33,7 @@
                         <option value="custom-high">700万円以上（入力する）</option>
                     </select>
                     <div id="income-input-wrapper" class="form-input-wrapper hidden">
-                        <input type="number" id="income-input" class="form-input" placeholder="年収を入力（万円）" min="0" max="10000">
+                        <input type="number" id="income-input" class="form-input" placeholder="年収を入力（万円）" min="0" max="10000" inputmode="numeric">
                         <span class="form-unit">万円</span>
                     </div>
                 </div>
@@ -42,10 +42,10 @@
                 <div class="form-group">
                     <label class="form-label">
                         <span class="step">②</span>
-                        年齢を教えてください
+                        あなたの年齢は？
                     </label>
                     <div class="form-input-wrapper">
-                        <input type="number" id="age" class="form-input" placeholder="35" min="18" max="80" required>
+                        <input type="number" id="age" class="form-input" placeholder="35" min="18" max="80" required inputmode="numeric">
                         <span class="form-unit">歳</span>
                     </div>
                 </div>
@@ -80,11 +80,11 @@
                 <div class="form-group">
                     <label class="form-label">
                         <span class="step">④</span>
-                        他社借入の合計額
-                        <span class="form-hint">（カードローン、車のローンなど）</span>
+                        他社借入の合計額は？
+                        <span class="form-hint">カードローン、車のローンなど（なければ0）</span>
                     </label>
                     <div class="form-input-wrapper">
-                        <input type="number" id="total-debt" class="form-input" placeholder="0" min="0" value="0">
+                        <input type="number" id="total-debt" class="form-input" placeholder="0" min="0" value="0" inputmode="numeric">
                         <span class="form-unit">万円</span>
                     </div>
                 </div>
@@ -93,10 +93,11 @@
                 <div class="form-group">
                     <label class="form-label">
                         <span class="step">⑤</span>
-                        他社借入の月々の返済額
+                        他社借入の月々の返済額は？
+                        <span class="form-hint">毎月の返済額の合計（なければ0）</span>
                     </label>
                     <div class="form-input-wrapper">
-                        <input type="number" id="monthly-payment" class="form-input" placeholder="0" min="0" value="0">
+                        <input type="number" id="monthly-payment" class="form-input" placeholder="0" min="0" value="0" inputmode="numeric">
                         <span class="form-unit">円</span>
                     </div>
                 </div>
@@ -105,10 +106,10 @@
                 <div class="form-group">
                     <label class="form-label">
                         <span class="step">⑥</span>
-                        勤続年数
+                        勤続年数は？
                     </label>
                     <div class="form-input-wrapper">
-                        <input type="number" id="years-employed" class="form-input" placeholder="5" min="0" max="50" required>
+                        <input type="number" id="years-employed" class="form-input" placeholder="5" min="0" max="50" required inputmode="numeric">
                         <span class="form-unit">年</span>
                     </div>
                 </div>
