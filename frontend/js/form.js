@@ -12,8 +12,23 @@ const incomeInputWrapper = document.getElementById('income-input-wrapper');
 const incomeInput = document.getElementById('income-input');
 const resultModal = document.getElementById('result-modal');
 const resultValue = document.getElementById('result-value');
-const btnDetail = document.getElementById('btn-detail');
-const btnClose = document.getElementById('btn-close');
+const resultValueCopy = document.getElementById('result-value-copy');
+
+// ステップ要素
+const step1 = document.getElementById('result-step-1');
+const step2 = document.getElementById('result-step-2');
+const step3 = document.getElementById('result-step-3');
+
+// ボタン要素
+const btnConsult = document.getElementById('btn-consult');
+const btnCloseOnly = document.getElementById('btn-close-only');
+const btnSubmitContact = document.getElementById('btn-submit-contact');
+const btnSkipContact = document.getElementById('btn-skip-contact');
+const btnCloseFinal = document.getElementById('btn-close-final');
+
+// 連絡先入力
+const contactName = document.getElementById('contact-name');
+const contactPhone = document.getElementById('contact-phone');
 
 // 計算結果を保存
 let lastResult = null;
@@ -28,9 +43,16 @@ function initForm() {
     // フォーム送信イベント
     form.addEventListener('submit', handleSubmit);
 
-    // モーダルボタン
-    btnDetail.addEventListener('click', handleDetailClick);
-    btnClose.addEventListener('click', handleCloseClick);
+    // ステップ1のボタン
+    btnConsult.addEventListener('click', goToStep2);
+    btnCloseOnly.addEventListener('click', handleCloseOnly);
+
+    // ステップ2のボタン
+    btnSubmitContact.addEventListener('click', handleSubmitContact);
+    btnSkipContact.addEventListener('click', handleSkipContact);
+
+    // ステップ3のボタン
+    btnCloseFinal.addEventListener('click', handleCloseFinal);
 }
 
 /**
@@ -99,9 +121,6 @@ async function handleSubmit(e) {
         // 結果を表示
         showResult(result.borrowableAmount);
 
-        // APIに送信（バックグラウンド）
-        sendToApi(lastResult);
-
     } catch (error) {
         console.error('Submit error:', error);
         alert('エラーが発生しました。もう一度お試しください。');
@@ -161,11 +180,113 @@ function getFormData() {
 }
 
 /**
- * 結果を表示
+ * 結果を表示（ステップ1）
  */
 function showResult(borrowableAmount) {
-    resultValue.textContent = formatAmountInMan(borrowableAmount);
+    const formattedAmount = formatAmountInMan(borrowableAmount);
+    resultValue.textContent = formattedAmount;
+    
+    // ステップ1を表示
+    step1.classList.remove('hidden');
+    step2.classList.add('hidden');
+    step3.classList.add('hidden');
+    
     resultModal.classList.remove('hidden');
+}
+
+/**
+ * ステップ2へ（連絡先入力）
+ */
+function goToStep2() {
+    step1.classList.add('hidden');
+    step2.classList.remove('hidden');
+    step3.classList.add('hidden');
+    
+    // 名前入力にフォーカス
+    setTimeout(() => contactName.focus(), 100);
+}
+
+/**
+ * 「結果だけ確認して閉じる」
+ */
+async function handleCloseOnly() {
+    // LINEメッセージを送信（結果のみ）
+    const message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n詳しい審査をご希望の場合は「詳細希望」とお送りください。`;
+
+    await sendMessage(message);
+    
+    // APIに送信（連絡先なし）
+    sendToApi(lastResult, null, null);
+
+    // モーダルを閉じる
+    hideResult();
+    
+    // LIFFを閉じる
+    closeLiff();
+}
+
+/**
+ * 連絡先を送信
+ */
+async function handleSubmitContact() {
+    const name = contactName.value.trim();
+    const phone = contactPhone.value.trim();
+
+    // LINEメッセージを送信
+    let message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n`;
+    
+    if (name || phone) {
+        message += `【ご連絡先】\n`;
+        if (name) message += `お名前: ${name}\n`;
+        if (phone) message += `電話番号: ${phone}\n`;
+        message += `\n`;
+    }
+    
+    message += `詳細希望`;
+
+    await sendMessage(message);
+    
+    // APIに送信
+    sendToApi(lastResult, name, phone);
+
+    // ステップ3へ
+    goToStep3();
+}
+
+/**
+ * 連絡先をスキップしてLINEで相談
+ */
+async function handleSkipContact() {
+    // LINEメッセージを送信
+    const message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n詳細希望`;
+
+    await sendMessage(message);
+    
+    // APIに送信（連絡先なし）
+    sendToApi(lastResult, null, null);
+
+    // ステップ3へ
+    goToStep3();
+}
+
+/**
+ * ステップ3へ（完了）
+ */
+function goToStep3() {
+    step1.classList.add('hidden');
+    step2.classList.add('hidden');
+    step3.classList.remove('hidden');
+    
+    // 結果をコピー
+    resultValueCopy.textContent = formatAmountInMan(lastResult.borrowableAmount) + '万円';
+}
+
+/**
+ * 最終的に閉じる
+ */
+function handleCloseFinal() {
+    hideResult();
+    closeLiff();
 }
 
 /**
@@ -173,32 +294,16 @@ function showResult(borrowableAmount) {
  */
 function hideResult() {
     resultModal.classList.add('hidden');
-}
-
-/**
- * 「詳しく相談する」ボタン
- */
-async function handleDetailClick() {
-    // LINEメッセージを送信
-    const message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n詳細希望`;
-
-    await sendMessage(message);
-
-    // LIFFを閉じる
-    closeLiff();
-}
-
-/**
- * 「閉じる」ボタン
- */
-function handleCloseClick() {
-    hideResult();
+    
+    // フォームをリセット
+    contactName.value = '';
+    contactPhone.value = '';
 }
 
 /**
  * APIに診断結果を送信
  */
-async function sendToApi(data) {
+async function sendToApi(data, name, phone) {
     // ユーザー情報を追加
     const profile = getUserProfile();
 
@@ -214,7 +319,9 @@ async function sendToApi(data) {
         yearsEmployed: data.yearsEmployed,
         borrowableAmount: data.borrowableAmount,
         repaymentRatio: data.repaymentRatio,
-        loanPeriod: data.loanPeriod
+        loanPeriod: data.loanPeriod,
+        contactName: name || null,
+        contactPhone: phone || null
     };
 
     try {

@@ -481,6 +481,24 @@ body {
     color: var(--primary-color);
 }
 
+/* Contact Info Section */
+.detail-contact {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-color);
+}
+
+.detail-contact h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 16px;
+}
+
+.detail-contact .detail-grid {
+    margin-bottom: 0;
+}
+
 .detail-item .uid {
     font-family: monospace;
     font-size: 0.85rem;

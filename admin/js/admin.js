@@ -26,6 +26,8 @@ const DEMO_DATA = [
         monthlyPayment: 15000,
         yearsEmployed: 10,
         borrowableAmount: 38500000,
+        contactName: '山田 太郎',
+        contactPhone: '090-1234-5678',
         status: '未連絡',
         memo: ''
     },
@@ -42,6 +44,8 @@ const DEMO_DATA = [
         monthlyPayment: 0,
         yearsEmployed: 5,
         borrowableAmount: 42000000,
+        contactName: '佐藤 花子',
+        contactPhone: '080-2345-6789',
         status: '連絡済み',
         memo: '3/2にメール送信済み'
     },
@@ -58,6 +62,8 @@ const DEMO_DATA = [
         monthlyPayment: 50000,
         yearsEmployed: 15,
         borrowableAmount: 52000000,
+        contactName: null,
+        contactPhone: null,
         status: '面談予約',
         memo: '3/5 14:00 面談予定'
     },
@@ -74,6 +80,8 @@ const DEMO_DATA = [
         monthlyPayment: 10000,
         yearsEmployed: 2,
         borrowableAmount: 28000000,
+        contactName: '田中 美咲',
+        contactPhone: null,
         status: '未連絡',
         memo: ''
     },
@@ -90,6 +98,8 @@ const DEMO_DATA = [
         monthlyPayment: 30000,
         yearsEmployed: 12,
         borrowableAmount: 45000000,
+        contactName: '高橋 健太',
+        contactPhone: '070-3456-7890',
         status: '成約',
         memo: '3/1 契約完了'
     }
@@ -291,6 +301,8 @@ function openDetail(id) {
     document.getElementById('detail-monthly').textContent = currentDiagnosis.monthlyPayment.toLocaleString() + '円';
     document.getElementById('detail-years').textContent = currentDiagnosis.yearsEmployed + '年';
     document.getElementById('detail-result').textContent = formatAmount(currentDiagnosis.borrowableAmount) + '万円';
+    document.getElementById('detail-contact-name').textContent = currentDiagnosis.contactName || '未入力';
+    document.getElementById('detail-contact-phone').textContent = currentDiagnosis.contactPhone || '未入力';
     document.getElementById('detail-status-select').value = currentDiagnosis.status;
     document.getElementById('detail-memo').value = currentDiagnosis.memo || '';
 
@@ -342,7 +354,7 @@ async function saveDetail() {
  * CSVエクスポート
  */
 function exportCSV() {
-    const headers = ['日時', 'ユーザー名', 'LINE UID', '年収', '年齢', '雇用形態', '他社借入(合計)', '他社借入(月返済)', '勤続年数', '借入可能額', 'ステータス', 'メモ'];
+    const headers = ['日時', 'ユーザー名', 'LINE UID', '年収', '年齢', '雇用形態', '他社借入(合計)', '他社借入(月返済)', '勤続年数', '借入可能額', 'お名前', '電話番号', 'ステータス', 'メモ'];
     
     const rows = diagnoses.map(d => [
         formatDate(d.createdAt),
@@ -355,6 +367,8 @@ function exportCSV() {
         d.monthlyPayment,
         d.yearsEmployed,
         d.borrowableAmount,
+        d.contactName || '',
+        d.contactPhone || '',
         d.status,
         d.memo || ''
     ]);
