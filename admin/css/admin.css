@@ -230,6 +230,10 @@ body {
     border-color: var(--primary-color);
 }
 
+.search-input {
+    min-width: 220px;
+}
+
 .actions {
     display: flex;
     gap: 12px;
