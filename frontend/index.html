@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>住宅ローン簡易診断</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>住宅ローン簡易診断</h1>
+            <p class="subtitle">1分で借入可能額がわかる！</p>
+        </header>
+
+        <main class="main">
+            <form id="diagnosis-form" class="form">
+                <!-- 年収 -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <span class="step">①</span>
+                        あなたの年収は？
+                    </label>
+                    <select id="income-select" class="form-select" required>
+                        <option value="">選択してください</option>
+                        <option value="custom-low">300万円未満（入力する）</option>
+                        <option value="3000000">300〜400万円</option>
+                        <option value="4000000">400〜500万円</option>
+                        <option value="5000000">500〜600万円</option>
+                        <option value="6000000">600〜700万円</option>
+                        <option value="custom-high">700万円以上（入力する）</option>
+                    </select>
+                    <div id="income-input-wrapper" class="form-input-wrapper hidden">
+                        <input type="number" id="income-input" class="form-input" placeholder="年収を入力（万円）" min="0" max="10000">
+                        <span class="form-unit">万円</span>
+                    </div>
+                </div>
+
+                <!-- 年齢 -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <span class="step">②</span>
+                        年齢を教えてください
+                    </label>
+                    <div class="form-input-wrapper">
+                        <input type="number" id="age" class="form-input" placeholder="35" min="18" max="80" required>
+                        <span class="form-unit">歳</span>
+                    </div>
+                </div>
+
+                <!-- 雇用形態 -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <span class="step">③</span>
+                        雇用形態は？
+                    </label>
+                    <div class="form-radio-group">
+                        <label class="form-radio">
+                            <input type="radio" name="employment" value="正社員" required>
+                            <span>正社員</span>
+                        </label>
+                        <label class="form-radio">
+                            <input type="radio" name="employment" value="契約社員">
+                            <span>契約社員</span>
+                        </label>
+                        <label class="form-radio">
+                            <input type="radio" name="employment" value="自営業">
+                            <span>自営業</span>
+                        </label>
+                        <label class="form-radio">
+                            <input type="radio" name="employment" value="その他">
+                            <span>その他</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 他社借入（合計額） -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <span class="step">④</span>
+                        他社借入の合計額
+                        <span class="form-hint">（カードローン、車のローンなど）</span>
+                    </label>
+                    <div class="form-input-wrapper">
+                        <input type="number" id="total-debt" class="form-input" placeholder="0" min="0" value="0">
+                        <span class="form-unit">万円</span>
+                    </div>
+                </div>
+
+                <!-- 他社借入（月返済額） -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <span class="step">⑤</span>
+                        他社借入の月々の返済額
+                    </label>
+                    <div class="form-input-wrapper">
+                        <input type="number" id="monthly-payment" class="form-input" placeholder="0" min="0" value="0">
+                        <span class="form-unit">円</span>
+                    </div>
+                </div>
+
+                <!-- 勤続年数 -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <span class="step">⑥</span>
+                        勤続年数
+                    </label>
+                    <div class="form-input-wrapper">
+                        <input type="number" id="years-employed" class="form-input" placeholder="5" min="0" max="50" required>
+                        <span class="form-unit">年</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    診断する
+                </button>
+            </form>
+        </main>
+
+        <footer class="footer">
+            <p class="note">※この診断結果は簡易的なシミュレーションです。</p>
+        </footer>
+    </div>
+
+    <!-- 結果モーダル -->
+    <div id="result-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="result-header">
+                <h2>診断結果</h2>
+            </div>
+            <div class="result-body">
+                <p class="result-label">あなたの借入可能額（目安）は</p>
+                <p class="result-amount">
+                    <span id="result-value">3,500</span>
+                    <span class="result-unit">万円</span>
+                </p>
+                <p class="result-note">
+                    ※この数値は簡易的なシミュレーションです。<br>
+                    より正確な審査を希望される場合は、<br>
+                    このままチャットで「詳細希望」と送信してください。
+                </p>
+            </div>
+            <div class="result-actions">
+                <button id="btn-detail" class="btn-primary">
+                    詳しく相談する
+                </button>
+                <button id="btn-close" class="btn-secondary">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/liff-init.js"></script>
+    <script src="js/calculate.js"></script>
+    <script src="js/form.js"></script>
+</body>
+</html>
