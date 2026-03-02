@@ -20,9 +20,13 @@ router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT設定
-JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
+
+
+def get_jwt_secret() -> str:
+    """JWT秘密鍵を取得（環境変数から都度読み込み）"""
+    return os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
 
 
 def verify_token(authorization: str = Header(None)) -> dict:
@@ -34,16 +38,22 @@ def verify_token(authorization: str = Header(None)) -> dict:
     
     try:
         # "Bearer {token}" 形式
-        scheme, token = authorization.split()
+        parts = authorization.split()
+        if len(parts) != 2:
+            raise HTTPException(status_code=401, detail="認証形式が不正です")
+        
+        scheme, token = parts
         if scheme.lower() != "bearer":
             raise HTTPException(status_code=401, detail="認証形式が不正です")
         
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="トークンが期限切れです")
-    except Exception:
+    except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="トークンが不正です")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="認証エラー")
 
 
 @router.post("/login")
@@ -65,7 +75,7 @@ async def login(input_data: AdminLoginInput):
         "sub": input_data.username,
         "exp": expiration
     }
-    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    token = jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)
     
     return {
         "success": True,
@@ -111,7 +121,7 @@ async def export_diagnoses(
     _auth: dict = Depends(verify_token)
 ):
     """
-    CSVエクスポート
+    CSVエクスポート（BOM付きUTF-8でExcel対応）
     """
     fs = FirestoreService()
     diagnoses, _ = fs.list_diagnoses(
@@ -121,8 +131,10 @@ async def export_diagnoses(
         limit=10000
     )
     
-    # CSV生成
+    # CSV生成（BOM付きUTF-8）
     output = io.StringIO()
+    # BOMを追加
+    output.write('\ufeff')
     writer = csv.writer(output)
     
     # ヘッダー
@@ -158,7 +170,7 @@ async def export_diagnoses(
     
     return StreamingResponse(
         iter([output.getvalue()]),
-        media_type="text/csv",
+        media_type="text/csv; charset=utf-8-sig",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 

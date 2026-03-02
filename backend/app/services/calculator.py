@@ -14,6 +14,10 @@ def get_monthly_payment_per_million(rate: float, years: int) -> float:
     Returns:
         月返済額（円）
     """
+    # エッジケース: 返済期間が0以下
+    if years <= 0:
+        return float('inf')  # 借入不可を示す
+    
     if rate == 0:
         return 1_000_000 / (years * 12)
     
@@ -47,8 +51,26 @@ def calculate_borrowable_amount(
     # 返済期間（35年 or 80歳-年齢 の短い方）
     loan_period = min(35, 80 - age)
     
+    # エッジケース: 返済期間が0以下（80歳以上）
+    if loan_period <= 0:
+        return {
+            "borrowableAmount": 0,
+            "borrowableAmountMan": 0,
+            "repaymentRatio": ratio,
+            "loanPeriod": 0
+        }
+    
     # 審査金利1.5%での100万円あたり月返済額
     monthly_per_million = get_monthly_payment_per_million(1.5, loan_period)
+    
+    # エッジケース: 月返済額が計算できない
+    if monthly_per_million <= 0 or monthly_per_million == float('inf'):
+        return {
+            "borrowableAmount": 0,
+            "borrowableAmountMan": 0,
+            "repaymentRatio": ratio,
+            "loanPeriod": loan_period
+        }
     
     # 他社年間返済額（万円→円に変換）
     annual_other_payment = monthly_payment * 10000 * 12
@@ -62,7 +84,7 @@ def calculate_borrowable_amount(
     else:
         borrowable = (available_annual / 12) / monthly_per_million * 1_000_000
     
-    # 万円単位で切り捨て
+    # 万円単位で切り捨て、負の値は0に
     borrowable = max(0, int(borrowable / 10000) * 10000)
     
     return {

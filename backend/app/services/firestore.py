@@ -14,6 +14,14 @@ class FirestoreService:
         self.db = firestore.Client()
         self.collection = self.db.collection("diagnoses")
     
+    def _convert_datetime(self, data: dict) -> dict:
+        """datetimeフィールドをISO文字列に変換"""
+        if data.get("createdAt") and hasattr(data["createdAt"], "isoformat"):
+            data["createdAt"] = data["createdAt"].isoformat() + "Z"
+        if data.get("updatedAt") and hasattr(data["updatedAt"], "isoformat"):
+            data["updatedAt"] = data["updatedAt"].isoformat() + "Z"
+        return data
+    
     def save_diagnosis(self, data: dict) -> str:
         """
         診断結果を保存
@@ -47,7 +55,7 @@ class FirestoreService:
         if doc.exists:
             data = doc.to_dict()
             data["id"] = doc.id
-            return data
+            return self._convert_datetime(data)
         return None
     
     def list_diagnoses(
@@ -65,45 +73,52 @@ class FirestoreService:
         Returns:
             (診断リスト, 総件数)
         """
+        # 基本クエリ（createdAtでソート）
         query = self.collection.order_by("createdAt", direction=firestore.Query.DESCENDING)
         
-        # フィルタリング
+        # ステータスフィルタのみ適用（Firestoreの複合クエリ制限を回避）
         if status:
             query = query.where("status", "==", status)
         
-        if from_date:
-            from_dt = datetime.strptime(from_date, "%Y-%m-%d")
-            query = query.where("createdAt", ">=", from_dt)
-        
-        if to_date:
-            to_dt = datetime.strptime(to_date + " 23:59:59", "%Y-%m-%d %H:%M:%S")
-            query = query.where("createdAt", "<=", to_dt)
-        
-        # 総件数取得（簡易版：全件取得してカウント）
+        # 全件取得
         all_docs = list(query.stream())
-        total = len(all_docs)
         
-        # 検索フィルタ（クライアントサイド）
-        if search:
-            all_docs = [
-                doc for doc in all_docs 
-                if search.lower() in doc.to_dict().get("lineDisplayName", "").lower()
-            ]
-            total = len(all_docs)
+        # クライアントサイドでフィルタリング
+        filtered_docs = []
+        for doc in all_docs:
+            data = doc.to_dict()
+            
+            # 日付フィルタ
+            if from_date:
+                from_dt = datetime.strptime(from_date, "%Y-%m-%d")
+                created_at = data.get("createdAt")
+                if created_at and created_at < from_dt:
+                    continue
+            
+            if to_date:
+                to_dt = datetime.strptime(to_date + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+                created_at = data.get("createdAt")
+                if created_at and created_at > to_dt:
+                    continue
+            
+            # 検索フィルタ
+            if search:
+                display_name = data.get("lineDisplayName", "").lower()
+                if search.lower() not in display_name:
+                    continue
+            
+            filtered_docs.append(doc)
+        
+        total = len(filtered_docs)
         
         # ページネーション
-        paginated_docs = all_docs[offset:offset + limit]
+        paginated_docs = filtered_docs[offset:offset + limit]
         
         results = []
         for doc in paginated_docs:
             data = doc.to_dict()
             data["id"] = doc.id
-            # datetime を ISO文字列に変換
-            if data.get("createdAt"):
-                data["createdAt"] = data["createdAt"].isoformat() + "Z"
-            if data.get("updatedAt"):
-                data["updatedAt"] = data["updatedAt"].isoformat() + "Z"
-            results.append(data)
+            results.append(self._convert_datetime(data))
         
         return results, total
     
@@ -159,7 +174,7 @@ class FirestoreService:
             
             # 今日の件数
             created_at = data.get("createdAt")
-            if created_at and created_at.date() == today:
+            if created_at and hasattr(created_at, "date") and created_at.date() == today:
                 today_count += 1
             
             # ステータス
