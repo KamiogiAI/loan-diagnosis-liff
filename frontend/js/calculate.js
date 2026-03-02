@@ -37,10 +37,25 @@ const MONTHLY_PAYMENT_TABLE = {
  */
 function calculateBorrowableAmount(income, age, monthlyPayment) {
     // 入力値のバリデーション
-    if (income <= 0 || age < 18 || age > 80) {
+    if (income <= 0) {
         return {
             success: false,
-            error: '入力値が不正です'
+            error: '年収を入力してください'
+        };
+    }
+
+    if (age < 18) {
+        return {
+            success: false,
+            error: '18歳未満は診断できません'
+        };
+    }
+
+    // 65歳以上は診断不可（バックエンドと統一）
+    if (age >= 65) {
+        return {
+            success: false,
+            error: '65歳以上は返済期間が短くなるため診断できません'
         };
     }
 
@@ -51,11 +66,11 @@ function calculateBorrowableAmount(income, age, monthlyPayment) {
     const maxPeriodByAge = 80 - age;
     const loanPeriod = Math.min(35, maxPeriodByAge);
 
-    // 返済期間が15年未満の場合は計算不可
+    // 返済期間が15年未満の場合は計算不可（念のため）
     if (loanPeriod < 15) {
         return {
             success: false,
-            error: '65歳以上は返済期間が短くなるため診断できません',
+            error: '返済期間が短すぎるため診断できません',
             loanPeriod: loanPeriod
         };
     }

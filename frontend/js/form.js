@@ -100,11 +100,17 @@ async function handleSubmit(e) {
         // 入力値を取得
         const formData = getFormData();
 
-        // 計算実行
+        // 年齢チェック（65歳以上は診断不可）
+        if (formData.age >= 65) {
+            alert('65歳以上は返済期間が短くなるため診断できません');
+            return;
+        }
+
+        // 計算実行（月返済額は万円→円に変換して渡す）
         const result = calculateBorrowableAmount(
             formData.income,
             formData.age,
-            formData.monthlyPayment
+            formData.monthlyPayment * 10000  // 万円→円
         );
 
         if (!result.success) {
@@ -161,11 +167,11 @@ function getFormData() {
         incomeRange = '700万円以上';
     }
 
-    // その他の項目
+    // その他の項目（万円のまま取得）
     const age = parseInt(document.getElementById('age').value);
     const employmentType = document.querySelector('input[name="employment"]:checked').value;
-    const totalDebt = parseInt(document.getElementById('total-debt').value || 0) * 10000; // 万円→円
-    const monthlyPayment = parseInt(document.getElementById('monthly-payment').value || 0) * 10000; // 万円→円
+    const totalDebt = parseFloat(document.getElementById('total-debt').value || 0);  // 万円
+    const monthlyPayment = parseFloat(document.getElementById('monthly-payment').value || 0);  // 万円
     const yearsEmployed = parseInt(document.getElementById('years-employed').value);
 
     return {
@@ -173,8 +179,8 @@ function getFormData() {
         incomeRange,
         age,
         employmentType,
-        totalDebt,
-        monthlyPayment,
+        totalDebt,       // 万円
+        monthlyPayment,  // 万円
         yearsEmployed
     };
 }
@@ -216,7 +222,7 @@ async function handleCloseOnly() {
     await sendMessage(message);
     
     // APIに送信（連絡先なし）
-    sendToApi(lastResult, null, null);
+    await sendToApi(lastResult, null, null);
 
     // モーダルを閉じる
     hideResult();
@@ -247,7 +253,7 @@ async function handleSubmitContact() {
     await sendMessage(message);
     
     // APIに送信
-    sendToApi(lastResult, name, phone);
+    await sendToApi(lastResult, name, phone);
 
     // ステップ3へ
     goToStep3();
@@ -263,7 +269,7 @@ async function handleSkipContact() {
     await sendMessage(message);
     
     // APIに送信（連絡先なし）
-    sendToApi(lastResult, null, null);
+    await sendToApi(lastResult, null, null);
 
     // ステップ3へ
     goToStep3();
@@ -307,21 +313,17 @@ async function sendToApi(data, name, phone) {
     // ユーザー情報を追加
     const profile = getUserProfile();
 
+    // バックエンドに合わせて万円で送信
     const payload = {
         lineUserId: profile?.userId || 'unknown',
         lineDisplayName: profile?.displayName || '不明',
-        income: data.income,
+        income: data.income,                    // 円
         incomeRange: data.incomeRange,
         age: data.age,
         employmentType: data.employmentType,
-        totalDebt: data.totalDebt,
-        monthlyPayment: data.monthlyPayment,
-        yearsEmployed: data.yearsEmployed,
-        borrowableAmount: data.borrowableAmount,
-        repaymentRatio: data.repaymentRatio,
-        loanPeriod: data.loanPeriod,
-        contactName: name || null,
-        contactPhone: phone || null
+        totalDebt: data.totalDebt,              // 万円
+        monthlyPayment: data.monthlyPayment,    // 万円
+        yearsEmployed: data.yearsEmployed
     };
 
     try {
@@ -340,9 +342,18 @@ async function sendToApi(data, name, phone) {
         const result = await response.json();
         console.log('API response:', result);
 
+        // 重複チェック
+        if (result.duplicate) {
+            console.log('既に診断済みのユーザーです');
+            // 過去の結果を使用（UIは変更しない）
+        }
+
+        return result;
+
     } catch (error) {
         console.error('API send error:', error);
         // エラーでもユーザー体験は継続
+        return null;
     }
 }
 

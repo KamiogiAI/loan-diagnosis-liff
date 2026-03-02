@@ -15,13 +15,21 @@ async def diagnose(input_data: DiagnosisInput):
     """
     診断を実行
     
-    1. 重複チェック（同じLINEユーザーの2回目以降を防止）
-    2. 借入可能額を計算
-    3. Firestoreに保存
-    4. 運営にメール通知
-    5. 結果を返却
+    1. 年齢チェック（65歳以上は診断不可）
+    2. 重複チェック（同じLINEユーザーの2回目以降を防止）
+    3. 借入可能額を計算
+    4. Firestoreに保存
+    5. 運営にメール通知
+    6. 結果を返却
     """
     try:
+        # 年齢チェック
+        if input_data.age >= 65:
+            raise HTTPException(
+                status_code=400, 
+                detail="65歳以上は返済期間が短くなるため診断できません"
+            )
+        
         fs = FirestoreService()
         
         # 重複チェック
@@ -42,6 +50,10 @@ async def diagnose(input_data: DiagnosisInput):
             age=input_data.age,
             monthly_payment=input_data.monthlyPayment
         )
+        
+        # 計算エラーチェック
+        if result.get("error"):
+            raise HTTPException(status_code=400, detail=result["error"])
         
         # 保存データ作成
         diagnosis_data = {
@@ -72,6 +84,8 @@ async def diagnose(input_data: DiagnosisInput):
             "result": result
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

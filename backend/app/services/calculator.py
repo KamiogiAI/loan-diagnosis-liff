@@ -51,13 +51,14 @@ def calculate_borrowable_amount(
     # 返済期間（35年 or 80歳-年齢 の短い方）
     loan_period = min(35, 80 - age)
     
-    # エッジケース: 返済期間が0以下（80歳以上）
-    if loan_period <= 0:
+    # エッジケース: 返済期間が15年未満（65歳以上）
+    if loan_period < 15:
         return {
             "borrowableAmount": 0,
             "borrowableAmountMan": 0,
             "repaymentRatio": ratio,
-            "loanPeriod": 0
+            "loanPeriod": loan_period,
+            "error": "65歳以上は返済期間が短くなるため診断できません"
         }
     
     # 審査金利1.5%での100万円あたり月返済額
@@ -86,6 +87,9 @@ def calculate_borrowable_amount(
     
     # 万円単位で切り捨て、負の値は0に
     borrowable = max(0, int(borrowable / 10000) * 10000)
+    
+    # 上限1億円
+    borrowable = min(borrowable, 100_000_000)
     
     return {
         "borrowableAmount": borrowable,
