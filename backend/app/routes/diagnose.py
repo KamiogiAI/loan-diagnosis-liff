@@ -15,12 +15,27 @@ async def diagnose(input_data: DiagnosisInput):
     """
     診断を実行
     
-    1. 借入可能額を計算
-    2. Firestoreに保存
-    3. 運営にメール通知
-    4. 結果を返却
+    1. 重複チェック（同じLINEユーザーの2回目以降を防止）
+    2. 借入可能額を計算
+    3. Firestoreに保存
+    4. 運営にメール通知
+    5. 結果を返却
     """
     try:
+        fs = FirestoreService()
+        
+        # 重複チェック
+        existing = fs.check_duplicate(input_data.lineUserId)
+        if existing:
+            # 既に診断済みの場合は過去の結果を返す
+            return {
+                "success": True,
+                "duplicate": True,
+                "message": "既に診断済みです",
+                "diagnosisId": existing["id"],
+                "result": existing.get("result", {})
+            }
+        
         # 計算
         result = calculate_borrowable_amount(
             income=input_data.income,
@@ -45,7 +60,6 @@ async def diagnose(input_data: DiagnosisInput):
         }
         
         # Firestore保存
-        fs = FirestoreService()
         doc_id = fs.save_diagnosis(diagnosis_data)
         
         # メール通知（非同期でもいい）
@@ -53,8 +67,33 @@ async def diagnose(input_data: DiagnosisInput):
         
         return {
             "success": True,
+            "duplicate": False,
             "diagnosisId": doc_id,
             "result": result
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/diagnose/check/{line_user_id}")
+async def check_diagnosis(line_user_id: str):
+    """
+    診断済みかチェック（フロントエンドから事前確認用）
+    """
+    try:
+        fs = FirestoreService()
+        existing = fs.check_duplicate(line_user_id)
+        
+        if existing:
+            return {
+                "exists": True,
+                "diagnosisId": existing["id"],
+                "result": existing.get("result", {})
+            }
+        
+        return {
+            "exists": False
         }
         
     except Exception as e:

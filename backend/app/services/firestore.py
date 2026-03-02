@@ -22,6 +22,23 @@ class FirestoreService:
             data["updatedAt"] = data["updatedAt"].isoformat() + "Z"
         return data
     
+    def check_duplicate(self, line_user_id: str) -> Optional[dict]:
+        """
+        重複診断をチェック
+        
+        Args:
+            line_user_id: LINE ユーザーID
+        
+        Returns:
+            既存の診断データ（存在しない場合はNone）
+        """
+        docs = self.collection.where("lineUserId", "==", line_user_id).limit(1).stream()
+        for doc in docs:
+            data = doc.to_dict()
+            data["id"] = doc.id
+            return self._convert_datetime(data)
+        return None
+    
     def save_diagnosis(self, data: dict) -> str:
         """
         診断結果を保存
