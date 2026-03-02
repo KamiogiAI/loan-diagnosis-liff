@@ -1,0 +1,78 @@
+"""
+メール通知サービス（Resend）
+"""
+import os
+import resend
+
+
+def send_notification_email(diagnosis_data: dict) -> bool:
+    """
+    運営への通知メールを送信
+    
+    Args:
+        diagnosis_data: 診断データ
+    
+    Returns:
+        送信成功/失敗
+    """
+    api_key = os.getenv("RESEND_API_KEY")
+    notification_email = os.getenv("NOTIFICATION_EMAIL", "homesniper_contact@gac.free-up.jp")
+    from_email = os.getenv("FROM_EMAIL", "noreply@free-up.jp")
+    
+    if not api_key:
+        print("Warning: RESEND_API_KEY not set")
+        return False
+    
+    resend.api_key = api_key
+    
+    # メール本文作成
+    input_data = diagnosis_data.get("input", {})
+    result_data = diagnosis_data.get("result", {})
+    
+    html_content = f"""
+    <h2>🏠 新規診断がありました</h2>
+    
+    <h3>■ ユーザー情報</h3>
+    <ul>
+        <li><strong>LINE名:</strong> {diagnosis_data.get('lineDisplayName', '不明')}</li>
+        <li><strong>LINE ID:</strong> {diagnosis_data.get('lineUserId', '不明')}</li>
+    </ul>
+    
+    <h3>■ 入力内容</h3>
+    <ul>
+        <li><strong>年収:</strong> {input_data.get('incomeRange', '不明')}</li>
+        <li><strong>年齢:</strong> {input_data.get('age', '不明')}歳</li>
+        <li><strong>雇用形態:</strong> {input_data.get('employmentType', '不明')}</li>
+        <li><strong>他社借入合計:</strong> {input_data.get('totalDebt', 0)}万円</li>
+        <li><strong>月々の返済額:</strong> {input_data.get('monthlyPayment', 0)}万円</li>
+        <li><strong>勤続年数:</strong> {input_data.get('yearsEmployed', 0)}年</li>
+    </ul>
+    
+    <h3>■ 診断結果</h3>
+    <ul>
+        <li><strong>借入可能額:</strong> 約{result_data.get('borrowableAmountMan', 0):,}万円</li>
+        <li><strong>返済負担率:</strong> {int(result_data.get('repaymentRatio', 0) * 100)}%</li>
+        <li><strong>返済期間:</strong> {result_data.get('loanPeriod', 0)}年</li>
+    </ul>
+    
+    <p style="margin-top: 20px; color: #666;">
+        ※ このメールは自動送信されています。<br>
+        ユーザーへの連絡は管理画面から行ってください。
+    </p>
+    """
+    
+    try:
+        params = {
+            "from": f"住宅ローン診断 <{from_email}>",
+            "to": [notification_email],
+            "subject": f"【新規診断】{diagnosis_data.get('lineDisplayName', '不明')}様",
+            "html": html_content
+        }
+        
+        response = resend.Emails.send(params)
+        print(f"Email sent: {response}")
+        return True
+        
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
