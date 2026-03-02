@@ -29,6 +29,11 @@ def send_notification_email(diagnosis_data: dict) -> bool:
     input_data = diagnosis_data.get("input", {})
     result_data = diagnosis_data.get("result", {})
     
+    # 安全に値を取得
+    borrowable_man = result_data.get('borrowableAmountMan', 0) or 0
+    ratio = result_data.get('repaymentRatio', 0) or 0
+    loan_period = result_data.get('loanPeriod', 0) or 0
+    
     html_content = f"""
     <h2>🏠 新規診断がありました</h2>
     
@@ -50,9 +55,9 @@ def send_notification_email(diagnosis_data: dict) -> bool:
     
     <h3>■ 診断結果</h3>
     <ul>
-        <li><strong>借入可能額:</strong> 約{result_data.get('borrowableAmountMan', 0):,}万円</li>
-        <li><strong>返済負担率:</strong> {int(result_data.get('repaymentRatio', 0) * 100)}%</li>
-        <li><strong>返済期間:</strong> {result_data.get('loanPeriod', 0)}年</li>
+        <li><strong>借入可能額:</strong> 約{borrowable_man:,}万円</li>
+        <li><strong>返済負担率:</strong> {int(ratio * 100)}%</li>
+        <li><strong>返済期間:</strong> {loan_period}年</li>
     </ul>
     
     <p style="margin-top: 20px; color: #666;">
