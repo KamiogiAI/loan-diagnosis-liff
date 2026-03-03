@@ -2,21 +2,17 @@
 メール通知サービス（Resend）
 """
 import os
+import time
 import resend
+from typing import List
+from .settings import SettingsService
 
 
 def send_notification_email(diagnosis_data: dict) -> bool:
     """
-    運営への通知メールを送信
-    
-    Args:
-        diagnosis_data: 診断データ
-    
-    Returns:
-        送信成功/失敗
+    運営への通知メールを送信（複数通知先対応、5秒間隔）
     """
     api_key = os.getenv("RESEND_API_KEY")
-    notification_email = os.getenv("NOTIFICATION_EMAIL", "homesniper_contact@gac.free-up.jp")
     from_email = os.getenv("FROM_EMAIL", "noreply@free-up.jp")
     
     if not api_key:
@@ -25,11 +21,23 @@ def send_notification_email(diagnosis_data: dict) -> bool:
     
     resend.api_key = api_key
     
+    # 通知先を取得（DB + 環境変数）
+    settings = SettingsService()
+    emails = settings.get_notification_emails()
+    
+    # 環境変数の通知先も追加（重複排除）
+    env_email = os.getenv("NOTIFICATION_EMAIL")
+    if env_email and env_email not in emails:
+        emails.append(env_email)
+    
+    if not emails:
+        print("Warning: No notification emails configured")
+        return False
+    
     # メール本文作成
     input_data = diagnosis_data.get("input", {})
     result_data = diagnosis_data.get("result", {})
     
-    # 安全に値を取得
     borrowable_man = result_data.get('borrowableAmountMan', 0) or 0
     ratio = result_data.get('repaymentRatio', 0) or 0
     loan_period = result_data.get('loanPeriod', 0) or 0
@@ -66,18 +74,25 @@ def send_notification_email(diagnosis_data: dict) -> bool:
     </p>
     """
     
-    try:
-        params = {
-            "from": f"住宅ローン診断 <{from_email}>",
-            "to": [notification_email],
-            "subject": f"【新規診断】{diagnosis_data.get('lineDisplayName', '不明')}様",
-            "html": html_content
-        }
+    subject = f"【新規診断】{diagnosis_data.get('lineDisplayName', '不明')}様"
+    success_count = 0
+    
+    # 5秒間隔で送信
+    for i, email in enumerate(emails):
+        if i > 0:
+            time.sleep(5)  # 5秒待機
         
-        response = resend.Emails.send(params)
-        print(f"Email sent: {response}")
-        return True
-        
-    except Exception as e:
-        print(f"Error sending email: {e}")
-        return False
+        try:
+            params = {
+                "from": f"住宅ローン診断 <{from_email}>",
+                "to": [email],
+                "subject": subject,
+                "html": html_content
+            }
+            response = resend.Emails.send(params)
+            print(f"Email sent to {email}: {response}")
+            success_count += 1
+        except Exception as e:
+            print(f"Error sending email to {email}: {e}")
+    
+    return success_count > 0
