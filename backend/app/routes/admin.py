@@ -23,8 +23,6 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
 
-# ========== モデル ==========
-
 class PasswordChangeInput(BaseModel):
     current_password: str
     new_password: str
@@ -36,8 +34,6 @@ class UserCreateInput(BaseModel):
 class EmailInput(BaseModel):
     email: str
 
-
-# ========== 認証 ==========
 
 def get_jwt_secret() -> str:
     return os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
@@ -60,16 +56,13 @@ def verify_token(authorization: str = Header(None)) -> dict:
 
 @router.post("/login")
 async def login(input_data: AdminLoginInput):
-    """管理者ログイン"""
     settings = SettingsService()
     user = settings.get_user(input_data.username)
     
     if user:
-        # DB認証
         if not pwd_context.verify(input_data.password, user.get("password_hash", "")):
             raise HTTPException(status_code=401, detail="パスワードが正しくありません")
     else:
-        # 環境変数フォールバック（初期設定用）
         admin_username = os.getenv("ADMIN_USERNAME", "admin")
         admin_password = os.getenv("ADMIN_PASSWORD", "demo1234")
         if input_data.username != admin_username or input_data.password != admin_password:
@@ -77,7 +70,6 @@ async def login(input_data: AdminLoginInput):
     
     expiration = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
     token = jwt.encode({"sub": input_data.username, "exp": expiration}, get_jwt_secret(), algorithm=JWT_ALGORITHM)
-    
     return {"success": True, "token": token}
 
 
@@ -111,12 +103,27 @@ async def export_diagnoses(
     output = io.StringIO()
     output.write('\ufeff')
     writer = csv.writer(output)
-    writer.writerow(["ID", "LINE名", "年収", "年齢", "雇用形態", "他社借入(万)", "月返済(万)", "勤続年数", "借入可能額(万)", "ステータス", "メモ", "診断日時"])
+    writer.writerow(["ID", "LINE名", "お名前", "電話番号", "年収", "年齢", "雇用形態", "他社借入(万)", "月返済(万)", "勤続年数", "借入可能額(万)", "ステータス", "メモ", "診断日時"])
     
     for d in diagnoses:
         inp = d.get("input", {})
         res = d.get("result", {})
-        writer.writerow([d.get("id", ""), d.get("lineDisplayName", ""), inp.get("incomeRange", ""), inp.get("age", ""), inp.get("employmentType", ""), inp.get("totalDebt", ""), inp.get("monthlyPayment", ""), inp.get("yearsEmployed", ""), res.get("borrowableAmountMan", ""), d.get("status", ""), d.get("memo", ""), d.get("createdAt", "")])
+        writer.writerow([
+            d.get("id", ""),
+            d.get("lineDisplayName", ""),
+            d.get("contactName", ""),
+            d.get("contactPhone", ""),
+            inp.get("incomeRange", ""),
+            inp.get("age", ""),
+            inp.get("employmentType", ""),
+            inp.get("totalDebt", ""),
+            inp.get("monthlyPayment", ""),
+            inp.get("yearsEmployed", ""),
+            res.get("borrowableAmountMan", ""),
+            d.get("status", ""),
+            d.get("memo", ""),
+            d.get("createdAt", "")
+        ])
     
     output.seek(0)
     filename = f"diagnoses_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
@@ -158,7 +165,6 @@ async def get_stats(_auth: dict = Depends(verify_token)):
 
 @router.get("/settings/emails")
 async def get_notification_emails(_auth: dict = Depends(verify_token)):
-    """通知先メールアドレス一覧"""
     settings = SettingsService()
     emails = settings.get_notification_emails()
     return {"success": True, "emails": emails}
@@ -166,7 +172,6 @@ async def get_notification_emails(_auth: dict = Depends(verify_token)):
 
 @router.post("/settings/emails")
 async def add_notification_email(input_data: EmailInput, _auth: dict = Depends(verify_token)):
-    """通知先メールアドレス追加"""
     settings = SettingsService()
     if not settings.add_notification_email(input_data.email):
         raise HTTPException(status_code=400, detail="既に登録されています")
@@ -175,7 +180,6 @@ async def add_notification_email(input_data: EmailInput, _auth: dict = Depends(v
 
 @router.delete("/settings/emails")
 async def remove_notification_email(email: str = Query(...), _auth: dict = Depends(verify_token)):
-    """通知先メールアドレス削除"""
     settings = SettingsService()
     if not settings.remove_notification_email(email):
         raise HTTPException(status_code=404, detail="見つかりません")
@@ -186,7 +190,6 @@ async def remove_notification_email(email: str = Query(...), _auth: dict = Depen
 
 @router.get("/users")
 async def list_users(_auth: dict = Depends(verify_token)):
-    """管理者ユーザー一覧"""
     settings = SettingsService()
     users = settings.get_users()
     return {"success": True, "users": users}
@@ -194,7 +197,6 @@ async def list_users(_auth: dict = Depends(verify_token)):
 
 @router.post("/users")
 async def create_user(input_data: UserCreateInput, _auth: dict = Depends(verify_token)):
-    """管理者ユーザー追加"""
     settings = SettingsService()
     password_hash = pwd_context.hash(input_data.password)
     if not settings.create_user(input_data.username, password_hash):
@@ -204,8 +206,6 @@ async def create_user(input_data: UserCreateInput, _auth: dict = Depends(verify_
 
 @router.delete("/users/{username}")
 async def delete_user(username: str, _auth: dict = Depends(verify_token)):
-    """管理者ユーザー削除"""
-    # 自分自身は削除不可
     settings = SettingsService()
     if not settings.delete_user(username):
         raise HTTPException(status_code=404, detail="見つかりません")
@@ -214,7 +214,6 @@ async def delete_user(username: str, _auth: dict = Depends(verify_token)):
 
 @router.post("/users/change-password")
 async def change_password(input_data: PasswordChangeInput, auth: dict = Depends(verify_token)):
-    """パスワード変更"""
     settings = SettingsService()
     username = auth.get("sub")
     user = settings.get_user(username)
@@ -223,7 +222,6 @@ async def change_password(input_data: PasswordChangeInput, auth: dict = Depends(
         if not pwd_context.verify(input_data.current_password, user.get("password_hash", "")):
             raise HTTPException(status_code=400, detail="現在のパスワードが正しくありません")
     else:
-        # 環境変数ユーザーの場合、DBに新規作成
         admin_password = os.getenv("ADMIN_PASSWORD", "demo1234")
         if input_data.current_password != admin_password:
             raise HTTPException(status_code=400, detail="現在のパスワードが正しくありません")

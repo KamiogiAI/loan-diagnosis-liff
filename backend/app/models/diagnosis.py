@@ -35,6 +35,8 @@ class DiagnosisInput(BaseModel):
     totalDebt: float = Field(..., ge=0, description="他社借入合計（万円）")
     monthlyPayment: float = Field(..., ge=0, description="月々の返済額（万円）")
     yearsEmployed: int = Field(..., ge=0, description="勤続年数")
+    contactName: Optional[str] = Field("", description="連絡先名前")
+    contactPhone: Optional[str] = Field("", description="連絡先電話番号")
 
 
 class DiagnosisResult(BaseModel):
@@ -52,6 +54,8 @@ class DiagnosisRecord(BaseModel):
     lineDisplayName: str
     input: dict
     result: dict
+    contactName: str = ""
+    contactPhone: str = ""
     status: str = DiagnosisStatus.UNCONTACTED.value
     memo: str = ""
     createdAt: Optional[datetime] = None

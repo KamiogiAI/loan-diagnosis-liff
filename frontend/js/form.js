@@ -163,7 +163,6 @@ async function handleSkipContact() {
 }
 
 function handleCloseFinal() {
-    // フォームを隠して完了画面のみ表示
     if (mainContainer) {
         mainContainer.innerHTML = `
             <div class="complete-screen">
@@ -174,7 +173,6 @@ function handleCloseFinal() {
         `;
     }
     resultModal.classList.add('hidden');
-    // LIFFを閉じる（LINE内の場合）
     setTimeout(() => closeLiff(), 500);
 }
 
@@ -189,7 +187,9 @@ async function sendToApi(data, name, phone) {
         employmentType: data.employmentType,
         totalDebt: data.totalDebt,
         monthlyPayment: data.monthlyPayment,
-        yearsEmployed: data.yearsEmployed
+        yearsEmployed: data.yearsEmployed,
+        contactName: name || '',
+        contactPhone: phone || ''
     };
     try {
         const response = await fetch(`${API_ENDPOINT}/api/diagnose`, {

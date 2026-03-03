@@ -4,7 +4,6 @@ let diagnoses = [];
 let currentDiagnosis = null;
 let authToken = null;
 
-// DOM
 const loginScreen = document.getElementById('login-screen');
 const mainScreen = document.getElementById('main-screen');
 const loginForm = document.getElementById('login-form');
@@ -31,12 +30,10 @@ function init() {
     document.getElementById('btn-cancel').addEventListener('click', closeModal);
     document.getElementById('btn-save').addEventListener('click', saveDetail);
     
-    // タブ
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
     
-    // 設定
     document.getElementById('btn-add-email').addEventListener('click', addEmail);
     document.getElementById('btn-add-user').addEventListener('click', addUser);
     document.getElementById('btn-change-password').addEventListener('click', changePassword);
@@ -142,6 +139,8 @@ function openDetail(id) {
     document.getElementById('detail-date').textContent = formatDate(currentDiagnosis.createdAt);
     document.getElementById('detail-name').textContent = currentDiagnosis.lineDisplayName || '不明';
     document.getElementById('detail-uid').textContent = currentDiagnosis.lineUserId || '-';
+    document.getElementById('detail-contact-name').textContent = currentDiagnosis.contactName || '-';
+    document.getElementById('detail-contact-phone').textContent = currentDiagnosis.contactPhone || '-';
     document.getElementById('detail-income').textContent = inp.incomeRange || '-';
     document.getElementById('detail-age').textContent = (inp.age || '-') + '歳';
     document.getElementById('detail-employment').textContent = inp.employmentType || '-';
@@ -182,7 +181,6 @@ async function exportCSV() {
     } catch (e) { alert('エクスポート失敗'); }
 }
 
-// ========== 通知先設定 ==========
 async function loadEmails() {
     try {
         const res = await fetch(`${API_ENDPOINT}/api/admin/settings/emails`, { headers: { 'Authorization': `Bearer ${authToken}` } });
@@ -215,7 +213,6 @@ async function deleteEmail(email) {
     } catch (e) { alert('削除失敗'); }
 }
 
-// ========== ユーザー管理 ==========
 async function loadUsers() {
     try {
         const res = await fetch(`${API_ENDPOINT}/api/admin/users`, { headers: { 'Authorization': `Bearer ${authToken}` } });

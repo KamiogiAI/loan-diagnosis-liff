@@ -21,7 +21,6 @@ async def verify_request(
     check_rate_limit(request)
     verify_liff_request(request)
     
-    # アクセストークンがあれば検証（オプション）
     if x_liff_access_token:
         token_info = await verify_line_access_token(x_liff_access_token)
         if not token_info:
@@ -36,9 +35,7 @@ async def diagnose(
     request: Request,
     _verify: dict = Depends(verify_request)
 ):
-    """
-    診断を実行
-    """
+    """診断を実行"""
     try:
         if input_data.age >= 65:
             raise HTTPException(status_code=400, detail="65歳以上は返済期間が短くなるため診断できません")
@@ -70,6 +67,8 @@ async def diagnose(
         diagnosis_data = {
             "lineUserId": input_data.lineUserId,
             "lineDisplayName": input_data.lineDisplayName,
+            "contactName": input_data.contactName or "",
+            "contactPhone": input_data.contactPhone or "",
             "input": {
                 "income": input_data.income,
                 "incomeRange": input_data.incomeRange,
