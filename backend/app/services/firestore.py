@@ -16,22 +16,19 @@ class FirestoreService:
     
     def _convert_datetime(self, data: dict) -> dict:
         """datetimeフィールドをISO文字列に変換"""
-        if data.get("createdAt") and hasattr(data["createdAt"], "isoformat"):
-            data["createdAt"] = data["createdAt"].isoformat() + "Z"
-        if data.get("updatedAt") and hasattr(data["updatedAt"], "isoformat"):
-            data["updatedAt"] = data["updatedAt"].isoformat() + "Z"
+        for field in ["createdAt", "updatedAt"]:
+            val = data.get(field)
+            if val:
+                if hasattr(val, "isoformat"):
+                    # datetime objectの場合
+                    data[field] = val.strftime("%Y-%m-%dT%H:%M:%SZ")
+                elif isinstance(val, str) and "+00:00" in val:
+                    # 既に文字列で+00:00Zになってる場合
+                    data[field] = val.replace("+00:00Z", "Z").replace("+00:00", "Z")
         return data
     
     def check_duplicate(self, line_user_id: str) -> Optional[dict]:
-        """
-        重複診断をチェック
-        
-        Args:
-            line_user_id: LINE ユーザーID
-        
-        Returns:
-            既存の診断データ（存在しない場合はNone）
-        """
+        """重複診断をチェック"""
         docs = self.collection.where("lineUserId", "==", line_user_id).limit(1).stream()
         for doc in docs:
             data = doc.to_dict()
@@ -40,15 +37,7 @@ class FirestoreService:
         return None
     
     def save_diagnosis(self, data: dict) -> str:
-        """
-        診断結果を保存
-        
-        Args:
-            data: 診断データ
-        
-        Returns:
-            ドキュメントID
-        """
+        """診断結果を保存"""
         now = datetime.utcnow()
         data["createdAt"] = now
         data["updatedAt"] = now
@@ -59,15 +48,7 @@ class FirestoreService:
         return doc_ref[1].id
     
     def get_diagnosis(self, doc_id: str) -> Optional[dict]:
-        """
-        診断結果を取得
-        
-        Args:
-            doc_id: ドキュメントID
-        
-        Returns:
-            診断データ（存在しない場合はNone）
-        """
+        """診断結果を取得"""
         doc = self.collection.document(doc_id).get()
         if doc.exists:
             data = doc.to_dict()
@@ -84,28 +65,18 @@ class FirestoreService:
         limit: int = 50,
         offset: int = 0
     ) -> tuple[List[dict], int]:
-        """
-        診断履歴一覧を取得
-        
-        Returns:
-            (診断リスト, 総件数)
-        """
-        # 基本クエリ（createdAtでソート）
+        """診断履歴一覧を取得"""
         query = self.collection.order_by("createdAt", direction=firestore.Query.DESCENDING)
         
-        # ステータスフィルタのみ適用（Firestoreの複合クエリ制限を回避）
         if status:
             query = query.where("status", "==", status)
         
-        # 全件取得
         all_docs = list(query.stream())
         
-        # クライアントサイドでフィルタリング
         filtered_docs = []
         for doc in all_docs:
             data = doc.to_dict()
             
-            # 日付フィルタ
             if from_date:
                 from_dt = datetime.strptime(from_date, "%Y-%m-%d")
                 created_at = data.get("createdAt")
@@ -118,7 +89,6 @@ class FirestoreService:
                 if created_at and created_at > to_dt:
                     continue
             
-            # 検索フィルタ
             if search:
                 display_name = data.get("lineDisplayName", "").lower()
                 if search.lower() not in display_name:
@@ -127,8 +97,6 @@ class FirestoreService:
             filtered_docs.append(doc)
         
         total = len(filtered_docs)
-        
-        # ページネーション
         paginated_docs = filtered_docs[offset:offset + limit]
         
         results = []
@@ -140,16 +108,7 @@ class FirestoreService:
         return results, total
     
     def update_diagnosis(self, doc_id: str, data: dict) -> bool:
-        """
-        診断情報を更新
-        
-        Args:
-            doc_id: ドキュメントID
-            data: 更新データ
-        
-        Returns:
-            成功/失敗
-        """
+        """診断情報を更新"""
         doc_ref = self.collection.document(doc_id)
         doc = doc_ref.get()
         
@@ -161,19 +120,15 @@ class FirestoreService:
         return True
     
     def get_stats(self) -> dict:
-        """
-        統計情報を取得
-        """
+        """統計情報を取得"""
         from datetime import date
         
         all_docs = list(self.collection.stream())
         total = len(all_docs)
         
-        # 今日の件数
         today = date.today()
         today_count = 0
         
-        # ステータス別カウント
         status_count = {
             "未連絡": 0,
             "連絡済み": 0,
@@ -182,24 +137,20 @@ class FirestoreService:
             "見送り": 0
         }
         
-        # 平均借入可能額
         total_borrowable = 0
         borrowable_count = 0
         
         for doc in all_docs:
             data = doc.to_dict()
             
-            # 今日の件数
             created_at = data.get("createdAt")
             if created_at and hasattr(created_at, "date") and created_at.date() == today:
                 today_count += 1
             
-            # ステータス
             status = data.get("status", "未連絡")
             if status in status_count:
                 status_count[status] += 1
             
-            # 借入可能額
             result = data.get("result", {})
             if result.get("borrowableAmount"):
                 total_borrowable += result["borrowableAmount"]
