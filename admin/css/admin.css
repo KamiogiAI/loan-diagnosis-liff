@@ -730,3 +730,32 @@ body {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* タブ */
+.tabs { display: flex; gap: 0; background: #fff; border-bottom: 2px solid #e0e0e0; padding: 0 20px; }
+.tab { padding: 12px 24px; border: none; background: none; cursor: pointer; font-size: 14px; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+.tab:hover { color: #333; }
+.tab.active { color: #2196F3; border-bottom-color: #2196F3; font-weight: 600; }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* 設定カード */
+.settings-card { background: #fff; border-radius: 8px; padding: 24px; margin: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.settings-card h2 { margin: 0 0 8px 0; font-size: 18px; }
+.settings-card .hint { color: #666; font-size: 13px; margin-bottom: 16px; }
+
+.add-form { display: flex; gap: 8px; margin-bottom: 16px; }
+.add-form .input { flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+.password-form { display: flex; flex-direction: column; gap: 8px; max-width: 300px; }
+.password-form .input { padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; }
+
+.item-list { list-style: none; padding: 0; margin: 0; }
+.item-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
+.item-list li:last-child { border-bottom: none; }
+
+.btn-delete { padding: 4px 12px; background: #f44336; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.btn-delete:hover { background: #d32f2f; }
+
+.header-actions { display: flex; gap: 12px; align-items: center; }
+.btn-header { background: none; border: 1px solid #fff; color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
