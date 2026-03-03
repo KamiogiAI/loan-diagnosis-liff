@@ -3,6 +3,7 @@ const API_ENDPOINT = 'https://loan-diagnosis-api-247001240932.asia-northeast1.ru
 let diagnoses = [];
 let currentDiagnosis = null;
 let authToken = null;
+let searchQuery = '';
 
 const loginScreen = document.getElementById('login-screen');
 const mainScreen = document.getElementById('main-screen');
@@ -13,6 +14,7 @@ const emptyState = document.getElementById('empty-state');
 const loadingState = document.getElementById('loading-state');
 const filterStatus = document.getElementById('filter-status');
 const filterDate = document.getElementById('filter-date');
+const filterSearch = document.getElementById('filter-search');
 const detailModal = document.getElementById('detail-modal');
 const statTotal = document.getElementById('stat-total');
 const statToday = document.getElementById('stat-today');
@@ -24,6 +26,8 @@ function init() {
     document.getElementById('btn-logout').addEventListener('click', handleLogout);
     document.getElementById('btn-refresh').addEventListener('click', loadData);
     document.getElementById('btn-export').addEventListener('click', exportCSV);
+    document.getElementById('btn-search').addEventListener('click', handleSearch);
+    filterSearch.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSearch(); });
     filterStatus.addEventListener('change', renderTable);
     filterDate.addEventListener('change', renderTable);
     document.getElementById('modal-close').addEventListener('click', closeModal);
@@ -88,6 +92,11 @@ function switchTab(tabName) {
     if (tabName === 'users') loadUsers();
 }
 
+function handleSearch() {
+    searchQuery = filterSearch.value.trim().toLowerCase();
+    renderTable();
+}
+
 async function loadData() {
     loadingState.classList.remove('hidden');
     try {
@@ -114,18 +123,27 @@ function renderTable() {
     let filtered = diagnoses;
     if (sf) filtered = filtered.filter(d => d.status === sf);
     if (df) filtered = filtered.filter(d => (d.createdAt || '').startsWith(df));
+    if (searchQuery) {
+        filtered = filtered.filter(d => {
+            const name = (d.lineDisplayName || '').toLowerCase();
+            const contactName = (d.contactName || '').toLowerCase();
+            const phone = (d.contactPhone || '').toLowerCase();
+            return name.includes(searchQuery) || contactName.includes(searchQuery) || phone.includes(searchQuery);
+        });
+    }
     
     if (!filtered.length) { tableBody.innerHTML = ''; emptyState.classList.remove('hidden'); return; }
     emptyState.classList.add('hidden');
     
     tableBody.innerHTML = filtered.map(d => {
         const inp = d.input || {}, res = d.result || {};
+        const amount = res.borrowableAmountMan != null ? res.borrowableAmountMan.toLocaleString() : '-';
         return `<tr>
             <td>${formatDate(d.createdAt)}</td>
             <td>${esc(d.lineDisplayName || '不明')}</td>
             <td>${inp.incomeRange || '-'}</td>
             <td>${inp.age || '-'}歳</td>
-            <td><strong>${res.borrowableAmountMan ? res.borrowableAmountMan.toLocaleString() : '-'}万円</strong></td>
+            <td><strong>${amount}万円</strong></td>
             <td><span class="status-badge ${d.status || '未連絡'}">${d.status || '未連絡'}</span></td>
             <td><button class="btn-detail" onclick="openDetail('${d.id}')">詳細</button></td>
         </tr>`;
@@ -147,7 +165,8 @@ function openDetail(id) {
     document.getElementById('detail-debt').textContent = (inp.totalDebt || 0) + '万円';
     document.getElementById('detail-monthly').textContent = (inp.monthlyPayment || 0) + '万円';
     document.getElementById('detail-years').textContent = (inp.yearsEmployed || '-') + '年';
-    document.getElementById('detail-result').textContent = (res.borrowableAmountMan ? res.borrowableAmountMan.toLocaleString() : '-') + '万円';
+    const resultAmount = res.borrowableAmountMan != null ? res.borrowableAmountMan.toLocaleString() : '-';
+    document.getElementById('detail-result').textContent = resultAmount + '万円';
     document.getElementById('detail-status-select').value = currentDiagnosis.status || '未連絡';
     document.getElementById('detail-memo').value = currentDiagnosis.memo || '';
     detailModal.classList.remove('hidden');

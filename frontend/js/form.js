@@ -27,6 +27,7 @@ const contactName = document.getElementById('contact-name');
 const contactPhone = document.getElementById('contact-phone');
 
 let lastResult = null;
+let isConsultMode = false;  // 相談希望かどうか
 
 function initForm() {
     incomeSelect.addEventListener('change', handleIncomeSelectChange);
@@ -120,6 +121,7 @@ function showResult(borrowableAmount) {
 }
 
 function goToStep2() {
+    isConsultMode = true;
     step1.classList.add('hidden');
     step2.classList.remove('hidden');
     step3.classList.add('hidden');
@@ -133,13 +135,15 @@ function goToStep3() {
 }
 
 async function handleCloseOnly() {
+    isConsultMode = false;
     const message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n詳しい審査をご希望の場合は「詳細希望」とお送りください。`;
     await sendMessage(message);
     await sendToApi(lastResult, null, null);
-    goToStep3();
+    showCompleteScreen(false);
 }
 
 async function handleSubmitContact() {
+    isConsultMode = true;
     const name = contactName.value.trim();
     const phone = contactPhone.value.trim();
     let message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n`;
@@ -156,24 +160,39 @@ async function handleSubmitContact() {
 }
 
 async function handleSkipContact() {
+    isConsultMode = true;
     const message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n詳細希望`;
     await sendMessage(message);
     await sendToApi(lastResult, null, null);
     goToStep3();
 }
 
-function handleCloseFinal() {
+function showCompleteScreen(withContact) {
     if (mainContainer) {
-        mainContainer.innerHTML = `
-            <div class="complete-screen">
-                <div class="complete-icon">✓</div>
-                <h2>診断完了</h2>
-                <p>ありがとうございました。<br>担当者からのご連絡をお待ちください。</p>
-            </div>
-        `;
+        if (withContact) {
+            mainContainer.innerHTML = `
+                <div class="complete-screen">
+                    <div class="complete-icon">✓</div>
+                    <h2>診断完了</h2>
+                    <p>ありがとうございました。<br>担当者からのご連絡をお待ちください。</p>
+                </div>
+            `;
+        } else {
+            mainContainer.innerHTML = `
+                <div class="complete-screen">
+                    <div class="complete-icon">✓</div>
+                    <h2>診断完了</h2>
+                    <p>ご利用ありがとうございました。<br>詳しい審査をご希望の場合は<br>「詳細希望」とお送りください。</p>
+                </div>
+            `;
+        }
     }
     resultModal.classList.add('hidden');
     setTimeout(() => closeLiff(), 500);
+}
+
+function handleCloseFinal() {
+    showCompleteScreen(isConsultMode);
 }
 
 async function sendToApi(data, name, phone) {
