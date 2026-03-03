@@ -1,7 +1,7 @@
 """
 診断API
 """
-from fastapi import APIRouter, HTTPException, Request, Depends, Header
+from fastapi import APIRouter, HTTPException, Request, Depends, Header, BackgroundTasks
 from typing import Optional
 from app.models.diagnosis import DiagnosisInput
 from app.services.calculator import calculate_borrowable_amount
@@ -33,6 +33,7 @@ async def verify_request(
 async def diagnose(
     input_data: DiagnosisInput,
     request: Request,
+    background_tasks: BackgroundTasks,
     _verify: dict = Depends(verify_request)
 ):
     """診断を実行"""
@@ -83,7 +84,9 @@ async def diagnose(
         }
         
         doc_id = fs.save_diagnosis(diagnosis_data)
-        send_notification_email(diagnosis_data)
+        
+        # メール送信はバックグラウンドで実行
+        background_tasks.add_task(send_notification_email, diagnosis_data)
         
         return {
             "success": True,
