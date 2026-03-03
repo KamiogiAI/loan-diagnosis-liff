@@ -3,7 +3,7 @@
  */
 
 // API エンドポイント（本番環境で置き換え）
-const API_ENDPOINT = 'https://your-api.run.app';
+const API_ENDPOINT = 'https://loan-diagnosis-api-247001240932.asia-northeast1.run.app';
 
 // DOM要素
 const form = document.getElementById('diagnosis-form');
