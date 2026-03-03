@@ -802,3 +802,30 @@ body {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* 診断完了画面 */
+.complete-screen {
+    text-align: center;
+    padding: 60px 20px;
+}
+.complete-screen .complete-icon {
+    width: 80px;
+    height: 80px;
+    background: #4CAF50;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    color: white;
+    margin: 0 auto 24px;
+}
+.complete-screen h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: #333;
+}
+.complete-screen p {
+    color: #666;
+    line-height: 1.8;
+}

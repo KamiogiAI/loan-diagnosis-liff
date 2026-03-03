@@ -2,10 +2,8 @@
  * フォーム処理
  */
 
-// API エンドポイント
 const API_ENDPOINT = 'https://loan-diagnosis-api-247001240932.asia-northeast1.run.app';
 
-// DOM要素
 const form = document.getElementById('diagnosis-form');
 const incomeSelect = document.getElementById('income-select');
 const incomeInputWrapper = document.getElementById('income-input-wrapper');
@@ -13,29 +11,23 @@ const incomeInput = document.getElementById('income-input');
 const resultModal = document.getElementById('result-modal');
 const resultValue = document.getElementById('result-value');
 const resultValueCopy = document.getElementById('result-value-copy');
+const mainContainer = document.querySelector('.main');
 
-// ステップ要素
 const step1 = document.getElementById('result-step-1');
 const step2 = document.getElementById('result-step-2');
 const step3 = document.getElementById('result-step-3');
 
-// ボタン要素
 const btnConsult = document.getElementById('btn-consult');
 const btnCloseOnly = document.getElementById('btn-close-only');
 const btnSubmitContact = document.getElementById('btn-submit-contact');
 const btnSkipContact = document.getElementById('btn-skip-contact');
 const btnCloseFinal = document.getElementById('btn-close-final');
 
-// 連絡先入力
 const contactName = document.getElementById('contact-name');
 const contactPhone = document.getElementById('contact-phone');
 
-// 計算結果を保存
 let lastResult = null;
 
-/**
- * 初期化
- */
 function initForm() {
     incomeSelect.addEventListener('change', handleIncomeSelectChange);
     form.addEventListener('submit', handleSubmit);
@@ -52,14 +44,9 @@ function handleIncomeSelectChange(e) {
         incomeInputWrapper.classList.remove('hidden');
         incomeInput.required = true;
         incomeInput.focus();
-        if (value === 'custom-low') {
-            incomeInput.placeholder = '300未満の年収（万円）';
-            incomeInput.max = 299;
-        } else {
-            incomeInput.placeholder = '700以上の年収（万円）';
-            incomeInput.min = 700;
-            incomeInput.max = 10000;
-        }
+        incomeInput.placeholder = value === 'custom-low' ? '300未満の年収（万円）' : '700以上の年収（万円）';
+        incomeInput.max = value === 'custom-low' ? 299 : 10000;
+        if (value === 'custom-high') incomeInput.min = 700;
     } else {
         incomeInputWrapper.classList.add('hidden');
         incomeInput.required = false;
@@ -71,19 +58,16 @@ async function handleSubmit(e) {
     e.preventDefault();
     const submitBtn = form.querySelector('.btn-submit');
     submitBtn.disabled = true;
-    submitBtn.classList.add('loading');
     submitBtn.textContent = '計算中...';
 
     try {
         const formData = getFormData();
-        
         if (formData.age >= 65) {
             alert('65歳以上は返済期間が短くなるため診断できません');
             return;
         }
 
         const result = calculateBorrowableAmount(formData.income, formData.age, formData.monthlyPayment * 10000);
-
         if (!result.success) {
             alert(result.error || '計算できませんでした');
             return;
@@ -91,24 +75,21 @@ async function handleSubmit(e) {
 
         lastResult = { ...formData, ...result };
         showResult(result.borrowableAmount);
-
     } catch (error) {
-        console.error('Submit error:', error);
         alert('エラーが発生しました。もう一度お試しください。');
     } finally {
         submitBtn.disabled = false;
-        submitBtn.classList.remove('loading');
         submitBtn.textContent = '診断する';
     }
 }
 
 function getFormData() {
     let income;
-    const incomeSelectValue = incomeSelect.value;
-    if (incomeSelectValue === 'custom-low' || incomeSelectValue === 'custom-high') {
+    const val = incomeSelect.value;
+    if (val === 'custom-low' || val === 'custom-high') {
         income = parseInt(incomeInput.value) * 10000;
     } else {
-        income = parseInt(incomeSelectValue);
+        income = parseInt(val);
     }
 
     let incomeRange;
@@ -120,8 +101,7 @@ function getFormData() {
     else incomeRange = '700万円以上';
 
     return {
-        income,
-        incomeRange,
+        income, incomeRange,
         age: parseInt(document.getElementById('age').value),
         employmentType: document.querySelector('input[name="employment"]:checked').value,
         totalDebt: parseFloat(document.getElementById('total-debt').value || 0),
@@ -156,15 +136,12 @@ async function handleCloseOnly() {
     const message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n詳しい審査をご希望の場合は「詳細希望」とお送りください。`;
     await sendMessage(message);
     await sendToApi(lastResult, null, null);
-    
-    // 完了画面を表示
     goToStep3();
 }
 
 async function handleSubmitContact() {
     const name = contactName.value.trim();
     const phone = contactPhone.value.trim();
-
     let message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n`;
     if (name || phone) {
         message += `【ご連絡先】\n`;
@@ -173,7 +150,6 @@ async function handleSubmitContact() {
         message += `\n`;
     }
     message += `詳細希望`;
-
     await sendMessage(message);
     await sendToApi(lastResult, name, phone);
     goToStep3();
@@ -187,13 +163,19 @@ async function handleSkipContact() {
 }
 
 function handleCloseFinal() {
+    // フォームを隠して完了画面のみ表示
+    if (mainContainer) {
+        mainContainer.innerHTML = `
+            <div class="complete-screen">
+                <div class="complete-icon">✓</div>
+                <h2>診断完了</h2>
+                <p>ありがとうございました。<br>担当者からのご連絡をお待ちください。</p>
+            </div>
+        `;
+    }
     resultModal.classList.add('hidden');
-    // フォームをリセット
-    form.reset();
-    contactName.value = '';
-    contactPhone.value = '';
     // LIFFを閉じる（LINE内の場合）
-    closeLiff();
+    setTimeout(() => closeLiff(), 500);
 }
 
 async function sendToApi(data, name, phone) {
@@ -209,20 +191,14 @@ async function sendToApi(data, name, phone) {
         monthlyPayment: data.monthlyPayment,
         yearsEmployed: data.yearsEmployed
     };
-
     try {
         const response = await fetch(`${API_ENDPOINT}/api/diagnose`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        const result = await response.json();
-        if (result.duplicate) {
-            console.log('既に診断済みのユーザーです');
-        }
-        return result;
+        return await response.json();
     } catch (error) {
-        console.error('API send error:', error);
         return null;
     }
 }
