@@ -1,41 +1,53 @@
 """
 診断API
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Depends, Header
+from typing import Optional
 from app.models.diagnosis import DiagnosisInput
 from app.services.calculator import calculate_borrowable_amount
 from app.services.firestore import FirestoreService
 from app.services.mail import send_notification_email
+from app.middleware.rate_limit import check_rate_limit
+from app.middleware.liff_verify import verify_liff_request, verify_line_access_token, get_line_profile
 
 router = APIRouter()
 
 
+async def verify_request(
+    request: Request,
+    x_liff_access_token: Optional[str] = Header(None, alias="X-LIFF-Access-Token")
+):
+    """リクエスト検証（レートリミット + Origin/Referer）"""
+    check_rate_limit(request)
+    verify_liff_request(request)
+    
+    # アクセストークンがあれば検証（オプション）
+    if x_liff_access_token:
+        token_info = await verify_line_access_token(x_liff_access_token)
+        if not token_info:
+            raise HTTPException(status_code=401, detail="無効なアクセストークンです")
+        return token_info
+    return None
+
+
 @router.post("/diagnose")
-async def diagnose(input_data: DiagnosisInput):
+async def diagnose(
+    input_data: DiagnosisInput,
+    request: Request,
+    _verify: dict = Depends(verify_request)
+):
     """
     診断を実行
-    
-    1. 年齢チェック（65歳以上は診断不可）
-    2. 重複チェック（同じLINEユーザーの2回目以降を防止）
-    3. 借入可能額を計算
-    4. Firestoreに保存
-    5. 運営にメール通知
-    6. 結果を返却
     """
     try:
-        # 年齢チェック
         if input_data.age >= 65:
-            raise HTTPException(
-                status_code=400, 
-                detail="65歳以上は返済期間が短くなるため診断できません"
-            )
+            raise HTTPException(status_code=400, detail="65歳以上は返済期間が短くなるため診断できません")
         
         fs = FirestoreService()
         
         # 重複チェック
         existing = fs.check_duplicate(input_data.lineUserId)
         if existing:
-            # 既に診断済みの場合は過去の結果を返す
             return {
                 "success": True,
                 "duplicate": True,
@@ -51,11 +63,10 @@ async def diagnose(input_data: DiagnosisInput):
             monthly_payment=input_data.monthlyPayment
         )
         
-        # 計算エラーチェック
         if result.get("error"):
             raise HTTPException(status_code=400, detail=result["error"])
         
-        # 保存データ作成
+        # 保存
         diagnosis_data = {
             "lineUserId": input_data.lineUserId,
             "lineDisplayName": input_data.lineDisplayName,
@@ -71,10 +82,7 @@ async def diagnose(input_data: DiagnosisInput):
             "result": result
         }
         
-        # Firestore保存
         doc_id = fs.save_diagnosis(diagnosis_data)
-        
-        # メール通知（非同期でもいい）
         send_notification_email(diagnosis_data)
         
         return {
@@ -91,10 +99,12 @@ async def diagnose(input_data: DiagnosisInput):
 
 
 @router.get("/diagnose/check/{line_user_id}")
-async def check_diagnosis(line_user_id: str):
-    """
-    診断済みかチェック（フロントエンドから事前確認用）
-    """
+async def check_diagnosis(
+    line_user_id: str,
+    request: Request,
+    _verify: dict = Depends(verify_request)
+):
+    """診断済みかチェック"""
     try:
         fs = FirestoreService()
         existing = fs.check_duplicate(line_user_id)
@@ -105,10 +115,6 @@ async def check_diagnosis(line_user_id: str):
                 "diagnosisId": existing["id"],
                 "result": existing.get("result", {})
             }
-        
-        return {
-            "exists": False
-        }
-        
+        return {"exists": False}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
