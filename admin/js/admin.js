@@ -138,6 +138,8 @@ function renderTable() {
     tableBody.innerHTML = filtered.map(d => {
         const inp = d.input || {}, res = d.result || {};
         const amount = res.borrowableAmountMan != null ? res.borrowableAmountMan.toLocaleString() : '-';
+        const consultType = d.consultType || '-';
+        const consultClass = consultType === '詳細希望' ? 'consult-yes' : 'consult-no';
         return `<tr>
             <td>${formatDate(d.createdAt)}</td>
             <td>${esc(d.lineDisplayName || '不明')}</td>
@@ -145,6 +147,7 @@ function renderTable() {
             <td>${inp.age || '-'}歳</td>
             <td><strong>${amount}万円</strong></td>
             <td><span class="status-badge ${d.status || '未連絡'}">${d.status || '未連絡'}</span></td>
+            <td><span class="${consultClass}">${consultType}</span></td>
             <td><button class="btn-detail" onclick="openDetail('${d.id}')">詳細</button></td>
         </tr>`;
     }).join('');
@@ -159,6 +162,7 @@ function openDetail(id) {
     document.getElementById('detail-uid').textContent = currentDiagnosis.lineUserId || '-';
     document.getElementById('detail-contact-name').textContent = currentDiagnosis.contactName || '-';
     document.getElementById('detail-contact-phone').textContent = currentDiagnosis.contactPhone || '-';
+    document.getElementById('detail-consult-type').textContent = currentDiagnosis.consultType || '-';
     document.getElementById('detail-income').textContent = inp.incomeRange || '-';
     document.getElementById('detail-age').textContent = (inp.age || '-') + '歳';
     document.getElementById('detail-employment').textContent = inp.employmentType || '-';

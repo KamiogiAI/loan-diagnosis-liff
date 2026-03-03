@@ -69,6 +69,7 @@ async def diagnose(
             "lineDisplayName": input_data.lineDisplayName,
             "contactName": input_data.contactName or "",
             "contactPhone": input_data.contactPhone or "",
+            "consultType": input_data.consultType or "",
             "input": {
                 "income": input_data.income,
                 "incomeRange": input_data.incomeRange,

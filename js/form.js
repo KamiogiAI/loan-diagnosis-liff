@@ -27,7 +27,7 @@ const contactName = document.getElementById('contact-name');
 const contactPhone = document.getElementById('contact-phone');
 
 let lastResult = null;
-let isConsultMode = false;  // 相談希望かどうか
+let isConsultMode = false;
 
 function initForm() {
     incomeSelect.addEventListener('change', handleIncomeSelectChange);
@@ -138,7 +138,7 @@ async function handleCloseOnly() {
     isConsultMode = false;
     const message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n詳しい審査をご希望の場合は「詳細希望」とお送りください。`;
     await sendMessage(message);
-    await sendToApi(lastResult, null, null);
+    await sendToApi(lastResult, null, null, '結果だけ');
     showCompleteScreen(false);
 }
 
@@ -155,7 +155,7 @@ async function handleSubmitContact() {
     }
     message += `詳細希望`;
     await sendMessage(message);
-    await sendToApi(lastResult, name, phone);
+    await sendToApi(lastResult, name, phone, '詳細希望');
     goToStep3();
 }
 
@@ -163,7 +163,7 @@ async function handleSkipContact() {
     isConsultMode = true;
     const message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n詳細希望`;
     await sendMessage(message);
-    await sendToApi(lastResult, null, null);
+    await sendToApi(lastResult, null, null, '詳細希望');
     goToStep3();
 }
 
@@ -195,7 +195,7 @@ function handleCloseFinal() {
     showCompleteScreen(isConsultMode);
 }
 
-async function sendToApi(data, name, phone) {
+async function sendToApi(data, name, phone, consultType) {
     const profile = getUserProfile();
     const payload = {
         lineUserId: profile?.userId || 'unknown',
@@ -208,7 +208,8 @@ async function sendToApi(data, name, phone) {
         monthlyPayment: data.monthlyPayment,
         yearsEmployed: data.yearsEmployed,
         contactName: name || '',
-        contactPhone: phone || ''
+        contactPhone: phone || '',
+        consultType: consultType || ''
     };
     try {
         const response = await fetch(`${API_ENDPOINT}/api/diagnose`, {

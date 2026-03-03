@@ -37,6 +37,7 @@ class DiagnosisInput(BaseModel):
     yearsEmployed: int = Field(..., ge=0, description="勤続年数")
     contactName: Optional[str] = Field("", description="連絡先名前")
     contactPhone: Optional[str] = Field("", description="連絡先電話番号")
+    consultType: Optional[str] = Field("", description="選択肢（結果だけ/詳細希望）")
 
 
 class DiagnosisResult(BaseModel):
@@ -56,6 +57,7 @@ class DiagnosisRecord(BaseModel):
     result: dict
     contactName: str = ""
     contactPhone: str = ""
+    consultType: str = ""
     status: str = DiagnosisStatus.UNCONTACTED.value
     memo: str = ""
     createdAt: Optional[datetime] = None

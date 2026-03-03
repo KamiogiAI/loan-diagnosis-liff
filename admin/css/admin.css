@@ -759,3 +759,7 @@ body {
 
 .header-actions { display: flex; gap: 12px; align-items: center; }
 .btn-header { background: none; border: 1px solid #fff; color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+
+/* 希望タイプ */
+.consult-yes { color: #4CAF50; font-weight: 600; }
+.consult-no { color: #999; }

@@ -8,7 +8,6 @@
 </head>
 <body>
     <div class="app">
-        <!-- ログイン画面 -->
         <div id="login-screen" class="login-screen">
             <div class="login-card">
                 <h1>住宅ローン診断<br>管理画面</h1>
@@ -27,7 +26,6 @@
             </div>
         </div>
 
-        <!-- メイン画面 -->
         <div id="main-screen" class="main-screen hidden">
             <header class="header">
                 <div class="header-inner">
@@ -36,14 +34,12 @@
                 </div>
             </header>
 
-            <!-- タブ -->
             <div class="tabs">
                 <button class="tab active" data-tab="diagnoses">診断履歴</button>
                 <button class="tab" data-tab="emails">通知先設定</button>
                 <button class="tab" data-tab="users">ユーザー管理</button>
             </div>
 
-            <!-- 診断履歴タブ -->
             <main id="tab-diagnoses" class="content tab-content active">
                 <div class="stats-grid">
                     <div class="stat-card"><div class="stat-value" id="stat-total">0</div><div class="stat-label">総診断数</div></div>
@@ -74,7 +70,7 @@
                 </div>
                 <div class="table-container">
                     <table class="data-table">
-                        <thead><tr><th>日時</th><th>ユーザー名</th><th>年収</th><th>年齢</th><th>借入可能額</th><th>ステータス</th><th>操作</th></tr></thead>
+                        <thead><tr><th>日時</th><th>ユーザー名</th><th>年収</th><th>年齢</th><th>借入可能額</th><th>ステータス</th><th>希望</th><th>操作</th></tr></thead>
                         <tbody id="table-body"></tbody>
                     </table>
                     <div id="empty-state" class="empty-state hidden"><p>データがありません</p></div>
@@ -82,7 +78,6 @@
                 </div>
             </main>
 
-            <!-- 通知先設定タブ -->
             <main id="tab-emails" class="content tab-content">
                 <div class="settings-card">
                     <h2>📧 メール通知先設定</h2>
@@ -95,7 +90,6 @@
                 </div>
             </main>
 
-            <!-- ユーザー管理タブ -->
             <main id="tab-users" class="content tab-content">
                 <div class="settings-card">
                     <h2>👤 管理者ユーザー</h2>
@@ -117,7 +111,6 @@
             </main>
         </div>
 
-        <!-- 詳細モーダル -->
         <div id="detail-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header"><h2>診断詳細</h2><button class="modal-close" id="modal-close">&times;</button></div>
@@ -128,6 +121,7 @@
                         <div class="detail-item"><label>LINE UID</label><span id="detail-uid" class="uid">-</span></div>
                         <div class="detail-item"><label>お名前</label><span id="detail-contact-name">-</span></div>
                         <div class="detail-item"><label>電話番号</label><span id="detail-contact-phone">-</span></div>
+                        <div class="detail-item"><label>希望</label><span id="detail-consult-type">-</span></div>
                         <div class="detail-item"><label>年収</label><span id="detail-income">-</span></div>
                         <div class="detail-item"><label>年齢</label><span id="detail-age">-</span></div>
                         <div class="detail-item"><label>雇用形態</label><span id="detail-employment">-</span></div>

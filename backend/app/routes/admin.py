@@ -73,8 +73,6 @@ async def login(input_data: AdminLoginInput):
     return {"success": True, "token": token}
 
 
-# ========== 診断履歴 ==========
-
 @router.get("/diagnoses")
 async def list_diagnoses(
     status: Optional[str] = Query(None),
@@ -103,7 +101,7 @@ async def export_diagnoses(
     output = io.StringIO()
     output.write('\ufeff')
     writer = csv.writer(output)
-    writer.writerow(["ID", "LINE名", "お名前", "電話番号", "年収", "年齢", "雇用形態", "他社借入(万)", "月返済(万)", "勤続年数", "借入可能額(万)", "ステータス", "メモ", "診断日時"])
+    writer.writerow(["ID", "LINE名", "お名前", "電話番号", "希望", "年収", "年齢", "雇用形態", "他社借入(万)", "月返済(万)", "勤続年数", "借入可能額(万)", "ステータス", "メモ", "診断日時"])
     
     for d in diagnoses:
         inp = d.get("input", {})
@@ -113,6 +111,7 @@ async def export_diagnoses(
             d.get("lineDisplayName", ""),
             d.get("contactName", ""),
             d.get("contactPhone", ""),
+            d.get("consultType", ""),
             inp.get("incomeRange", ""),
             inp.get("age", ""),
             inp.get("employmentType", ""),
@@ -161,8 +160,6 @@ async def get_stats(_auth: dict = Depends(verify_token)):
     return {"success": True, "stats": fs.get_stats()}
 
 
-# ========== 設定 ==========
-
 @router.get("/settings/emails")
 async def get_notification_emails(_auth: dict = Depends(verify_token)):
     settings = SettingsService()
@@ -185,8 +182,6 @@ async def remove_notification_email(email: str = Query(...), _auth: dict = Depen
         raise HTTPException(status_code=404, detail="見つかりません")
     return {"success": True, "message": "削除しました"}
 
-
-# ========== ユーザー管理 ==========
 
 @router.get("/users")
 async def list_users(_auth: dict = Depends(verify_token)):
