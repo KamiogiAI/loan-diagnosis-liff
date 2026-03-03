@@ -3,7 +3,7 @@
  */
 
 // LIFF ID (本番環境で置き換え)
-const LIFF_ID = 'YOUR_LIFF_ID';
+const LIFF_ID = '2009294958-yD0nQKOa';
 
 // ユーザー情報格納用
 let liffProfile = null;
