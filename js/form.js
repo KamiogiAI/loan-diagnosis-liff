@@ -80,6 +80,25 @@ async function handleSubmit(e) {
             return;
         }
 
+        // 重複チェック
+        const profile = typeof getUserProfile === 'function' ? getUserProfile() : null;
+        const lineUserId = profile?.userId || 'unknown';
+        
+        if (lineUserId && lineUserId !== 'unknown') {
+            try {
+                const checkRes = await fetch(`${API_ENDPOINT}/api/diagnose/check/${lineUserId}`);
+                const checkData = await checkRes.json();
+                if (checkData.exists) {
+                    alert('既に診断済みです。\n診断は1回のみご利用いただけます。');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '診断する';
+                    return;
+                }
+            } catch (e) {
+                console.error('Check duplicate error:', e);
+            }
+        }
+
         const result = calculateBorrowableAmount(formData.income, formData.age, formData.monthlyPayment * 10000);
         
         if (!result.success) {
@@ -150,7 +169,7 @@ function goToStep3() {
     step3.classList.remove('hidden');
 }
 
-// 「閉じる」ボタン - ここでAPI呼び出し（相談なし）
+// 「閉じる」ボタン（step1）- ここでAPI呼び出し（相談なし）
 async function handleCloseOnly() {
     try {
         await sendToApi(lastResult, null, null, '結果だけ');
@@ -160,7 +179,7 @@ async function handleCloseOnly() {
     closeLiff();
 }
 
-// 「送信して閉じる」ボタン - ここでAPI呼び出し（相談あり、連絡先あり）
+// 「送信して閉じる」ボタン（step2）- ここでAPI呼び出し（相談あり、連絡先あり）
 async function handleSubmitContact() {
     const name = contactName.value.trim();
     const phone = contactPhone.value.trim();
@@ -176,24 +195,31 @@ async function handleSubmitContact() {
         return;
     }
     
+    // 先に画面を切り替え
+    goToStep3();
+    
+    // バックグラウンドでAPI送信
     try {
         await sendToApi(lastResult, name, phone, '相談希望');
     } catch (err) {
         console.error('API Error:', err);
     }
-    goToStep3();
 }
 
-// 「入力せずに閉じる」ボタン - ここでAPI呼び出し（相談あり、連絡先なし）
+// 「入力せずに閉じる」ボタン（step2）- ここでAPI呼び出し（相談あり、連絡先なし）
 async function handleSkipContact() {
+    // 先に画面を切り替え
+    goToStep3();
+    
+    // バックグラウンドでAPI送信
     try {
         await sendToApi(lastResult, null, null, '相談希望');
     } catch (err) {
         console.error('API Error:', err);
     }
-    goToStep3();
 }
 
+// 「閉じる」ボタン（step3）- API呼び出しなし、ただ閉じるだけ
 function handleCloseFinal() {
     closeLiff();
 }

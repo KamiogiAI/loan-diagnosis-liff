@@ -7,6 +7,7 @@ from app.models.diagnosis import DiagnosisInput
 from app.services.calculator import calculate_borrowable_amount
 from app.services.firestore import FirestoreService
 from app.services.mail import send_notification_email
+from app.services.line_messaging import send_diagnosis_result
 from app.middleware.rate_limit import check_rate_limit
 from app.middleware.liff_verify import verify_liff_request, verify_line_access_token, get_line_profile
 
@@ -27,6 +28,43 @@ async def verify_request(
             raise HTTPException(status_code=401, detail="無効なアクセストークンです")
         return token_info
     return None
+
+
+async def send_line_notification(diagnosis_data: dict, result: dict):
+    """LINEメッセージ送信（バックグラウンド実行用）"""
+    try:
+        await send_diagnosis_result(
+            line_user_id=diagnosis_data.get("lineUserId", ""),
+            borrowable_amount=result.get("borrowableAmount", 0),
+            display_name=diagnosis_data.get("lineDisplayName", ""),
+            consult_type=diagnosis_data.get("consultType", "")
+        )
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to send LINE notification: {e}")
+
+
+@router.get("/diagnose/check/{line_user_id}")
+async def check_diagnosis(
+    line_user_id: str,
+    request: Request
+):
+    """診断済みかチェック（認証なし - LIFFからのアクセス用）"""
+    try:
+        check_rate_limit(request)
+        
+        fs = FirestoreService()
+        existing = fs.check_duplicate(line_user_id)
+        
+        if existing:
+            return {
+                "exists": True,
+                "diagnosisId": existing["id"],
+                "result": existing.get("result", {})
+            }
+        return {"exists": False}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/diagnose")
@@ -85,7 +123,8 @@ async def diagnose(
         
         doc_id = fs.save_diagnosis(diagnosis_data)
         
-        # メール送信はバックグラウンドで実行
+        # 処理順序: LINE通知 → メール送信
+        background_tasks.add_task(send_line_notification, diagnosis_data, result)
         background_tasks.add_task(send_notification_email, diagnosis_data)
         
         return {
@@ -97,27 +136,5 @@ async def diagnose(
         
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/diagnose/check/{line_user_id}")
-async def check_diagnosis(
-    line_user_id: str,
-    request: Request,
-    _verify: dict = Depends(verify_request)
-):
-    """診断済みかチェック"""
-    try:
-        fs = FirestoreService()
-        existing = fs.check_duplicate(line_user_id)
-        
-        if existing:
-            return {
-                "exists": True,
-                "diagnosisId": existing["id"],
-                "result": existing.get("result", {})
-            }
-        return {"exists": False}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
