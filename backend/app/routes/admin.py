@@ -56,17 +56,22 @@ def verify_token(authorization: str = Header(None)) -> dict:
 
 @router.post("/login")
 async def login(input_data: AdminLoginInput):
+    """ログイン（Firestoreのみ使用）"""
     settings = SettingsService()
     user = settings.get_user(input_data.username)
     
     if user:
+        # Firestoreにユーザーが存在する場合
         if not pwd_context.verify(input_data.password, user.get("password_hash", "")):
             raise HTTPException(status_code=401, detail="パスワードが正しくありません")
     else:
-        admin_username = os.getenv("ADMIN_USERNAME", "admin")
-        admin_password = os.getenv("ADMIN_PASSWORD", "demo1234")
-        if input_data.username != admin_username or input_data.password != admin_password:
+        # Firestoreにユーザーがいない場合、初期adminアカウント（admin/admin123）を許可
+        # ※初回ログイン後、管理画面でパスワード変更を推奨
+        if input_data.username != "admin" or input_data.password != "admin123":
             raise HTTPException(status_code=401, detail="ユーザー名またはパスワードが正しくありません")
+        # 初回ログイン時にDBにユーザーを作成
+        password_hash = pwd_context.hash("admin123")
+        settings.create_user("admin", password_hash)
     
     expiration = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
     token = jwt.encode({"sub": input_data.username, "exp": expiration}, get_jwt_secret(), algorithm=JWT_ALGORITHM)
@@ -213,18 +218,27 @@ async def change_password(input_data: PasswordChangeInput, auth: dict = Depends(
     username = auth.get("sub")
     user = settings.get_user(username)
     
-    if user:
-        if not pwd_context.verify(input_data.current_password, user.get("password_hash", "")):
-            raise HTTPException(status_code=400, detail="現在のパスワードが正しくありません")
-    else:
-        admin_password = os.getenv("ADMIN_PASSWORD", "demo1234")
-        if input_data.current_password != admin_password:
-            raise HTTPException(status_code=400, detail="現在のパスワードが正しくありません")
+    if not user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+    
+    if not pwd_context.verify(input_data.current_password, user.get("password_hash", "")):
+        raise HTTPException(status_code=400, detail="現在のパスワードが正しくありません")
     
     password_hash = pwd_context.hash(input_data.new_password)
-    if user:
-        settings.update_password(username, password_hash)
-    else:
-        settings.create_user(username, password_hash)
+    settings.update_password(username, password_hash)
     
     return {"success": True, "message": "パスワードを変更しました"}
+
+
+@router.delete("/diagnoses/{diagnosis_id}")
+async def delete_diagnosis(
+    diagnosis_id: str,
+    _auth: dict = Depends(verify_token)
+):
+    """診断データを削除"""
+    fs = FirestoreService()
+    try:
+        fs.delete_diagnosis(diagnosis_id)
+        return {"success": True, "message": "削除しました"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
