@@ -10,7 +10,7 @@ from .settings import SettingsService
 
 def send_notification_email(diagnosis_data: dict) -> bool:
     """
-    運営への通知メールを送信（複数通知先対応、5秒間隔）
+    運営への通知メールを送信（Firestoreの通知先のみ使用、5秒間隔）
     """
     api_key = os.getenv("RESEND_API_KEY")
     from_email = os.getenv("FROM_EMAIL", "noreply@free-up.jp")
@@ -21,17 +21,12 @@ def send_notification_email(diagnosis_data: dict) -> bool:
     
     resend.api_key = api_key
     
-    # 通知先を取得（DB + 環境変数）
+    # 通知先をFirestoreから取得（環境変数は使用しない）
     settings = SettingsService()
     emails = settings.get_notification_emails()
     
-    # 環境変数の通知先も追加（重複排除）
-    env_email = os.getenv("NOTIFICATION_EMAIL")
-    if env_email and env_email not in emails:
-        emails.append(env_email)
-    
     if not emails:
-        print("Warning: No notification emails configured")
+        print("Warning: No notification emails configured in Firestore")
         return False
     
     # メール本文作成
@@ -49,6 +44,9 @@ def send_notification_email(diagnosis_data: dict) -> bool:
     <ul>
         <li><strong>LINE名:</strong> {diagnosis_data.get('lineDisplayName', '不明')}</li>
         <li><strong>LINE ID:</strong> {diagnosis_data.get('lineUserId', '不明')}</li>
+        <li><strong>お名前:</strong> {diagnosis_data.get('contactName', '-') or '-'}</li>
+        <li><strong>電話番号:</strong> {diagnosis_data.get('contactPhone', '-') or '-'}</li>
+        <li><strong>希望:</strong> {diagnosis_data.get('consultType', '-') or '-'}</li>
     </ul>
     
     <h3>■ 入力内容</h3>
