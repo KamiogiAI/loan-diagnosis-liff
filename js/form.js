@@ -67,6 +67,15 @@ async function handleSubmit(e) {
     try {
         const formData = getFormData();
         
+        // バリデーション
+        if (isNaN(formData.income) || formData.income <= 0) {
+            alert('年収を正しく入力してください');
+            return;
+        }
+        if (isNaN(formData.age) || formData.age < 18 || formData.age > 100) {
+            alert('年齢を正しく入力してください');
+            return;
+        }
         if (formData.age >= 65) {
             alert('65歳以上は返済期間が短くなるため診断できません');
             return;
@@ -102,9 +111,10 @@ function getFormData() {
     let income;
     const incomeSelectValue = incomeSelect.value;
     if (incomeSelectValue === 'custom-low' || incomeSelectValue === 'custom-high') {
-        income = parseInt(incomeInput.value) * 10000;
+        const inputVal = parseInt(incomeInput.value);
+        income = isNaN(inputVal) ? 0 : inputVal * 10000;
     } else {
-        income = parseInt(incomeSelectValue);
+        income = parseInt(incomeSelectValue) || 0;
     }
 
     let incomeRange;
@@ -118,7 +128,7 @@ function getFormData() {
     return {
         income,
         incomeRange,
-        age: parseInt(document.getElementById('age').value),
+        age: parseInt(document.getElementById('age').value) || 0,
         employmentType: document.querySelector('input[name="employment"]:checked')?.value || '',
         totalDebt: parseInt(document.getElementById('total-debt').value) || 0,
         monthlyPayment: parseInt(document.getElementById('monthly-payment').value) || 0,
@@ -165,12 +175,20 @@ async function handleSubmitContact() {
         return;
     }
     
-    await sendToApi(lastResult, name, phone, '相談希望');
+    try {
+        await sendToApi(lastResult, name, phone, '相談希望');
+    } catch (err) {
+        console.error('API Error:', err);
+    }
     goToStep3();
 }
 
 async function handleSkipContact() {
-    await sendToApi(lastResult, null, null, '相談希望');
+    try {
+        await sendToApi(lastResult, null, null, '相談希望');
+    } catch (err) {
+        console.error('API Error:', err);
+    }
     goToStep3();
 }
 
@@ -206,6 +224,11 @@ async function sendToApi(data, name, phone, consultType) {
         headers: headers,
         body: JSON.stringify(payload)
     });
+    
+    if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+    }
+    
     return await response.json();
 }
 
