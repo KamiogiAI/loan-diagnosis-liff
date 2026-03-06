@@ -1,4 +1,10 @@
 const API_ENDPOINT = 'https://loan-diagnosis-api-247001240932.asia-northeast1.run.app';
+// consultType変換関数
+function formatConsultType(type) {
+    if (type === "result_only" || type === "結果だけ") return "結果だけ";
+    if (type === "consult_request" || type === "相談希望") return "相談希望";
+    return type || "-";
+}
 
 let diagnoses = [];
 let currentDiagnosis = null;
@@ -138,8 +144,8 @@ function renderTable() {
     tableBody.innerHTML = filtered.map(d => {
         const inp = d.input || {}, res = d.result || {};
         const amount = res.borrowableAmountMan != null ? res.borrowableAmountMan.toLocaleString() : '-';
-        const consultType = d.consultType || '-';
-        const consultClass = consultType === '詳細希望' ? 'consult-yes' : 'consult-no';
+        const consultType = formatConsultType(d.consultType);
+        const consultClass = (consultType === '相談希望' || consultType === '詳細希望') ? 'consult-yes' : 'consult-no';
         return `<tr>
             <td>${formatDate(d.createdAt)}</td>
             <td>${esc(d.lineDisplayName || '不明')}</td>
@@ -162,7 +168,7 @@ function openDetail(id) {
     document.getElementById('detail-uid').textContent = currentDiagnosis.lineUserId || '-';
     document.getElementById('detail-contact-name').textContent = currentDiagnosis.contactName || '-';
     document.getElementById('detail-contact-phone').textContent = currentDiagnosis.contactPhone || '-';
-    document.getElementById('detail-consult-type').textContent = currentDiagnosis.consultType || '-';
+    document.getElementById('detail-consult-type').textContent = formatConsultType(currentDiagnosis.consultType);
     document.getElementById('detail-income').textContent = inp.incomeRange || '-';
     document.getElementById('detail-age').textContent = (inp.age || '-') + '歳';
     document.getElementById('detail-employment').textContent = inp.employmentType || '-';
