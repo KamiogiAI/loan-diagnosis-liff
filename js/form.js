@@ -9,9 +9,6 @@ const incomeSelect = document.getElementById('income-select');
 const incomeInputWrapper = document.getElementById('income-input-wrapper');
 const incomeInput = document.getElementById('income-input');
 const resultModal = document.getElementById('result-modal');
-const resultValue = document.getElementById('result-value');
-const resultValueCopy = document.getElementById('result-value-copy');
-const mainContainer = document.querySelector('.main');
 
 const step1 = document.getElementById('result-step-1');
 const step2 = document.getElementById('result-step-2');
@@ -27,7 +24,7 @@ const contactName = document.getElementById('contact-name');
 const contactPhone = document.getElementById('contact-phone');
 
 let lastResult = null;
-let isConsultMode = false;
+let apiSent = false;
 
 function initForm() {
     incomeSelect.addEventListener('change', handleIncomeSelectChange);
@@ -45,13 +42,22 @@ function handleIncomeSelectChange(e) {
         incomeInputWrapper.classList.remove('hidden');
         incomeInput.required = true;
         incomeInput.focus();
-        incomeInput.placeholder = value === 'custom-low' ? '300未満の年収（万円）' : '700以上の年収（万円）';
-        incomeInput.max = value === 'custom-low' ? 299 : 10000;
-        if (value === 'custom-high') incomeInput.min = 700;
+        if (value === 'custom-low') {
+            incomeInput.placeholder = '300未満の年収（万円）';
+            incomeInput.max = 299;
+            incomeInput.min = 0;
+        } else {
+            incomeInput.placeholder = '700以上の年収（万円）';
+            incomeInput.min = 700;
+            incomeInput.max = 10000;
+        }
     } else {
+        incomeInputWrapper.classList.remove('hidden');
         incomeInputWrapper.classList.add('hidden');
         incomeInput.required = false;
         incomeInput.value = '';
+        incomeInput.min = 0;
+        incomeInput.max = 10000;
     }
 }
 
@@ -59,24 +65,37 @@ async function handleSubmit(e) {
     e.preventDefault();
     const submitBtn = form.querySelector('.btn-submit');
     submitBtn.disabled = true;
-    submitBtn.textContent = '計算中...';
+    submitBtn.textContent = '診断中...';
 
     try {
         const formData = getFormData();
         if (formData.age >= 65) {
             alert('65歳以上は返済期間が短くなるため診断できません');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '診断する';
             return;
         }
 
         const result = calculateBorrowableAmount(formData.income, formData.age, formData.monthlyPayment * 10000);
         if (!result.success) {
             alert(result.error || '計算できませんでした');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '診断する';
             return;
         }
 
         lastResult = { ...formData, ...result };
-        showResult(result.borrowableAmount);
+        apiSent = false;
+        
+        // 1. 完了画面を表示
+        showResult();
+        
+        // 2. API呼び出し（LINE通知 + メール送信）
+        sendToApi(lastResult, null, null, '結果だけ');
+        apiSent = true;
+
     } catch (error) {
+        console.error('Submit error:', error);
         alert('エラーが発生しました。もう一度お試しください。');
     } finally {
         submitBtn.disabled = false;
@@ -86,11 +105,11 @@ async function handleSubmit(e) {
 
 function getFormData() {
     let income;
-    const val = incomeSelect.value;
-    if (val === 'custom-low' || val === 'custom-high') {
+    const incomeSelectValue = incomeSelect.value;
+    if (incomeSelectValue === 'custom-low' || incomeSelectValue === 'custom-high') {
         income = parseInt(incomeInput.value) * 10000;
     } else {
-        income = parseInt(val);
+        income = parseInt(incomeSelectValue);
     }
 
     let incomeRange;
@@ -102,18 +121,17 @@ function getFormData() {
     else incomeRange = '700万円以上';
 
     return {
-        income, incomeRange,
+        income,
+        incomeRange,
         age: parseInt(document.getElementById('age').value),
-        employmentType: document.querySelector('input[name="employment"]:checked').value,
-        totalDebt: parseFloat(document.getElementById('total-debt').value || 0),
-        monthlyPayment: parseFloat(document.getElementById('monthly-payment').value || 0),
-        yearsEmployed: parseInt(document.getElementById('years-employed').value)
+        employmentType: document.querySelector('input[name="employment"]:checked')?.value || '',
+        totalDebt: parseInt(document.getElementById('total-debt').value) || 0,
+        monthlyPayment: parseInt(document.getElementById('monthly-payment').value) || 0,
+        yearsEmployed: parseInt(document.getElementById('years-employed').value) || 0
     };
 }
 
-function showResult(borrowableAmount) {
-    resultValue.textContent = formatAmountInMan(borrowableAmount);
-    resultValueCopy.textContent = formatAmountInMan(borrowableAmount) + '万円';
+function showResult() {
     step1.classList.remove('hidden');
     step2.classList.add('hidden');
     step3.classList.add('hidden');
@@ -121,11 +139,10 @@ function showResult(borrowableAmount) {
 }
 
 function goToStep2() {
-    isConsultMode = true;
     step1.classList.add('hidden');
     step2.classList.remove('hidden');
     step3.classList.add('hidden');
-    setTimeout(() => contactName.focus(), 100);
+    contactName.focus();
 }
 
 function goToStep3() {
@@ -135,68 +152,39 @@ function goToStep3() {
 }
 
 async function handleCloseOnly() {
-    isConsultMode = false;
-    const message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n詳しい審査をご希望の場合は「詳細希望」とお送りください。`;
-    await sendMessage(message);
-    await sendToApi(lastResult, null, null, '結果だけ');
-    showCompleteScreen(false);
+    closeLiff();
 }
 
 async function handleSubmitContact() {
-    isConsultMode = true;
     const name = contactName.value.trim();
     const phone = contactPhone.value.trim();
-    let message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n`;
-    if (name || phone) {
-        message += `【ご連絡先】\n`;
-        if (name) message += `お名前: ${name}\n`;
-        if (phone) message += `電話番号: ${phone}\n`;
-        message += `\n`;
+
+    if (!name) {
+        alert('お名前を入力してください');
+        contactName.focus();
+        return;
     }
-    message += `詳細希望`;
-    await sendMessage(message);
-    await sendToApi(lastResult, name, phone, '詳細希望');
+    if (!phone) {
+        alert('電話番号を入力してください');
+        contactPhone.focus();
+        return;
+    }
+    
+    await sendToApi(lastResult, name, phone, '相談希望');
     goToStep3();
 }
 
 async function handleSkipContact() {
-    isConsultMode = true;
-    const message = `【住宅ローン診断結果】\n借入可能額（目安）: ${formatAmountInMan(lastResult.borrowableAmount)}万円\n\n詳細希望`;
-    await sendMessage(message);
-    await sendToApi(lastResult, null, null, '詳細希望');
+    await sendToApi(lastResult, null, null, '相談希望');
     goToStep3();
 }
 
-function showCompleteScreen(withContact) {
-    if (mainContainer) {
-        if (withContact) {
-            mainContainer.innerHTML = `
-                <div class="complete-screen">
-                    <div class="complete-icon">✓</div>
-                    <h2>診断完了</h2>
-                    <p>ありがとうございました。<br>担当者からのご連絡をお待ちください。</p>
-                </div>
-            `;
-        } else {
-            mainContainer.innerHTML = `
-                <div class="complete-screen">
-                    <div class="complete-icon">✓</div>
-                    <h2>診断完了</h2>
-                    <p>ご利用ありがとうございました。<br>詳しい審査をご希望の場合は<br>「詳細希望」とお送りください。</p>
-                </div>
-            `;
-        }
-    }
-    resultModal.classList.add('hidden');
-    setTimeout(() => closeLiff(), 500);
-}
-
 function handleCloseFinal() {
-    showCompleteScreen(isConsultMode);
+    closeLiff();
 }
 
 async function sendToApi(data, name, phone, consultType) {
-    const profile = getUserProfile();
+    const profile = typeof getUserProfile === 'function' ? getUserProfile() : null;
     const payload = {
         lineUserId: profile?.userId || 'unknown',
         lineDisplayName: profile?.displayName || '不明',
@@ -211,15 +199,31 @@ async function sendToApi(data, name, phone, consultType) {
         contactPhone: phone || '',
         consultType: consultType || ''
     };
+
+    const accessToken = typeof getLiffAccessToken === 'function' ? getLiffAccessToken() : null;
+    const headers = { 'Content-Type': 'application/json' };
+    if (accessToken) {
+        headers['X-LIFF-Access-Token'] = accessToken;
+    }
+
     try {
-        const response = await fetch(`${API_ENDPOINT}/api/diagnose`, {
+        const response = await fetch(API_ENDPOINT + '/api/diagnose', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(payload)
         });
         return await response.json();
     } catch (error) {
+        console.error('API Error:', error);
         return null;
+    }
+}
+
+function closeLiff() {
+    if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+        liff.closeWindow();
+    } else {
+        window.close();
     }
 }
 
