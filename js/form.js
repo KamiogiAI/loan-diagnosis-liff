@@ -23,6 +23,9 @@ const contactName = document.getElementById('contact-name');
 const contactPhone = document.getElementById('contact-phone');
 
 let lastResult = null;
+let savedContactName = null;
+let savedContactPhone = null;
+let savedConsultType = null;
 
 function initForm() {
     incomeSelect.addEventListener('change', handleIncomeSelectChange);
@@ -107,8 +110,10 @@ async function handleSubmit(e) {
         }
 
         lastResult = { ...formData, ...result };
+        savedContactName = null;
+        savedContactPhone = null;
+        savedConsultType = '結果だけ';
         
-        // 完了画面を表示（API呼び出しはまだしない）
         showResult();
 
     } catch (error) {
@@ -169,17 +174,13 @@ function goToStep3() {
     step3.classList.remove('hidden');
 }
 
-// 「閉じる」ボタン（step1）- ここでAPI呼び出し（相談なし）
+// 「閉じる」ボタン（step1）
 async function handleCloseOnly() {
-    try {
-        await sendToApi(lastResult, null, null, '結果だけ');
-    } catch (err) {
-        console.error('API Error:', err);
-    }
-    closeLiff();
+    savedConsultType = '結果だけ';
+    goToStep3();
 }
 
-// 「送信して閉じる」ボタン（step2）- ここでAPI呼び出し（相談あり、連絡先あり）
+// 「送信して閉じる」ボタン（step2）
 async function handleSubmitContact() {
     const name = contactName.value.trim();
     const phone = contactPhone.value.trim();
@@ -195,32 +196,25 @@ async function handleSubmitContact() {
         return;
     }
     
-    // 先に画面を切り替え
+    savedContactName = name;
+    savedContactPhone = phone;
+    savedConsultType = '相談希望';
     goToStep3();
-    
-    // バックグラウンドでAPI送信
-    try {
-        await sendToApi(lastResult, name, phone, '相談希望');
-    } catch (err) {
-        console.error('API Error:', err);
-    }
 }
 
-// 「入力せずに閉じる」ボタン（step2）- ここでAPI呼び出し（相談あり、連絡先なし）
+// 「入力せずに閉じる」ボタン（step2）
 async function handleSkipContact() {
-    // 先に画面を切り替え
+    savedConsultType = '相談希望';
     goToStep3();
-    
-    // バックグラウンドでAPI送信
+}
+
+// 「閉じる」ボタン（step3）- ここでAPI呼び出し
+async function handleCloseFinal() {
     try {
-        await sendToApi(lastResult, null, null, '相談希望');
+        await sendToApi(lastResult, savedContactName, savedContactPhone, savedConsultType);
     } catch (err) {
         console.error('API Error:', err);
     }
-}
-
-// 「閉じる」ボタン（step3）- API呼び出しなし、ただ閉じるだけ
-function handleCloseFinal() {
     closeLiff();
 }
 
@@ -238,7 +232,7 @@ async function sendToApi(data, name, phone, consultType) {
         yearsEmployed: data.yearsEmployed,
         contactName: name || '',
         contactPhone: phone || '',
-        consultType: consultType || ''
+        consultType: consultType || '結果だけ'
     };
 
     const accessToken = typeof getLiffAccessToken === 'function' ? getLiffAccessToken() : null;
