@@ -2,23 +2,28 @@
  * フォーム処理
  */
 const API_ENDPOINT = 'https://loan-diagnosis-api-247001240932.asia-northeast1.run.app';
+
 const form = document.getElementById('diagnosis-form');
 const incomeSelect = document.getElementById('income-select');
 const incomeInputWrapper = document.getElementById('income-input-wrapper');
 const incomeInput = document.getElementById('income-input');
 const resultModal = document.getElementById('result-modal');
+
 const step1 = document.getElementById('result-step-1');
 const step2 = document.getElementById('result-step-2');
 const step3 = document.getElementById('result-step-3');
+
 const btnConsult = document.getElementById('btn-consult');
 const btnCloseOnly = document.getElementById('btn-close-only');
 const btnSubmitContact = document.getElementById('btn-submit-contact');
 const btnSkipContact = document.getElementById('btn-skip-contact');
 const btnCloseFinal = document.getElementById('btn-close-final');
+
 const contactName = document.getElementById('contact-name');
 const contactPhone = document.getElementById('contact-phone');
+
 let lastResult = null;
-let apiSent = false;
+
 function initForm() {
     incomeSelect.addEventListener('change', handleIncomeSelectChange);
     form.addEventListener('submit', handleSubmit);
@@ -28,6 +33,7 @@ function initForm() {
     btnSkipContact.addEventListener('click', handleSkipContact);
     btnCloseFinal.addEventListener('click', handleCloseFinal);
 }
+
 function handleIncomeSelectChange(e) {
     const value = e.target.value;
     if (value === 'custom-low' || value === 'custom-high') {
@@ -51,33 +57,38 @@ function handleIncomeSelectChange(e) {
         incomeInput.max = 10000;
     }
 }
+
 async function handleSubmit(e) {
     e.preventDefault();
     const submitBtn = form.querySelector('.btn-submit');
     submitBtn.disabled = true;
     submitBtn.textContent = '診断中...';
+
     try {
         const formData = getFormData();
+        
         if (formData.age >= 65) {
             alert('65歳以上は返済期間が短くなるため診断できません');
-            submitBtn.disabled = false;
-            submitBtn.textContent = '診断する';
             return;
         }
+
         const result = calculateBorrowableAmount(formData.income, formData.age, formData.monthlyPayment * 10000);
+        
         if (!result.success) {
             alert(result.error || '計算できませんでした');
-            submitBtn.disabled = false;
-            submitBtn.textContent = '診断する';
             return;
         }
+
         lastResult = { ...formData, ...result };
-        apiSent = false;
+        
         // 1. 完了画面を表示
         showResult();
-        // 2. API呼び出し（LINE通知 + メール送信）
-        sendToApi(lastResult, null, null, '結果だけ');
-        apiSent = true;
+        
+        // 2. API呼び出し（LINE通知 + メール送信）- バックグラウンドで実行
+        sendToApi(lastResult, null, null, '結果だけ').catch(err => {
+            console.error('API Error:', err);
+        });
+
     } catch (error) {
         console.error('Submit error:', error);
         alert('エラーが発生しました。もう一度お試しください。');
@@ -86,6 +97,7 @@ async function handleSubmit(e) {
         submitBtn.textContent = '診断する';
     }
 }
+
 function getFormData() {
     let income;
     const incomeSelectValue = incomeSelect.value;
@@ -94,6 +106,7 @@ function getFormData() {
     } else {
         income = parseInt(incomeSelectValue);
     }
+
     let incomeRange;
     if (income < 3000000) incomeRange = '300万円未満';
     else if (income < 4000000) incomeRange = '300〜400万円';
@@ -101,6 +114,7 @@ function getFormData() {
     else if (income < 6000000) incomeRange = '500〜600万円';
     else if (income < 7000000) incomeRange = '600〜700万円';
     else incomeRange = '700万円以上';
+
     return {
         income,
         incomeRange,
@@ -111,29 +125,35 @@ function getFormData() {
         yearsEmployed: parseInt(document.getElementById('years-employed').value) || 0
     };
 }
+
 function showResult() {
     step1.classList.remove('hidden');
     step2.classList.add('hidden');
     step3.classList.add('hidden');
     resultModal.classList.remove('hidden');
 }
+
 function goToStep2() {
     step1.classList.add('hidden');
     step2.classList.remove('hidden');
     step3.classList.add('hidden');
     contactName.focus();
 }
+
 function goToStep3() {
     step1.classList.add('hidden');
     step2.classList.add('hidden');
     step3.classList.remove('hidden');
 }
+
 async function handleCloseOnly() {
     closeLiff();
 }
+
 async function handleSubmitContact() {
     const name = contactName.value.trim();
     const phone = contactPhone.value.trim();
+
     if (!name) {
         alert('お名前を入力してください');
         contactName.focus();
@@ -144,16 +164,20 @@ async function handleSubmitContact() {
         contactPhone.focus();
         return;
     }
+    
     await sendToApi(lastResult, name, phone, '相談希望');
     goToStep3();
 }
+
 async function handleSkipContact() {
     await sendToApi(lastResult, null, null, '相談希望');
     goToStep3();
 }
+
 function handleCloseFinal() {
     closeLiff();
 }
+
 async function sendToApi(data, name, phone, consultType) {
     const profile = typeof getUserProfile === 'function' ? getUserProfile() : null;
     const payload = {
@@ -170,23 +194,21 @@ async function sendToApi(data, name, phone, consultType) {
         contactPhone: phone || '',
         consultType: consultType || ''
     };
+
     const accessToken = typeof getLiffAccessToken === 'function' ? getLiffAccessToken() : null;
     const headers = { 'Content-Type': 'application/json' };
     if (accessToken) {
         headers['X-LIFF-Access-Token'] = accessToken;
     }
-    try {
-        const response = await fetch(API_ENDPOINT + '/api/diagnose', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(payload)
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('API Error:', error);
-        return null;
-    }
+
+    const response = await fetch(API_ENDPOINT + '/api/diagnose', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(payload)
+    });
+    return await response.json();
 }
+
 function closeLiff() {
     if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
         liff.closeWindow();
@@ -194,4 +216,5 @@ function closeLiff() {
         window.close();
     }
 }
+
 document.addEventListener('DOMContentLoaded', initForm);
