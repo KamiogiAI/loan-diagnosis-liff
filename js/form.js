@@ -67,7 +67,6 @@ async function handleSubmit(e) {
     try {
         const formData = getFormData();
         
-        // バリデーション
         if (isNaN(formData.income) || formData.income <= 0) {
             alert('年収を正しく入力してください');
             return;
@@ -90,13 +89,8 @@ async function handleSubmit(e) {
 
         lastResult = { ...formData, ...result };
         
-        // 1. 完了画面を表示
+        // 完了画面を表示（API呼び出しはまだしない）
         showResult();
-        
-        // 2. API呼び出し（LINE通知 + メール送信）- バックグラウンドで実行
-        sendToApi(lastResult, null, null, '結果だけ').catch(err => {
-            console.error('API Error:', err);
-        });
 
     } catch (error) {
         console.error('Submit error:', error);
@@ -156,10 +150,17 @@ function goToStep3() {
     step3.classList.remove('hidden');
 }
 
+// 「閉じる」ボタン - ここでAPI呼び出し（相談なし）
 async function handleCloseOnly() {
+    try {
+        await sendToApi(lastResult, null, null, '結果だけ');
+    } catch (err) {
+        console.error('API Error:', err);
+    }
     closeLiff();
 }
 
+// 「送信して閉じる」ボタン - ここでAPI呼び出し（相談あり、連絡先あり）
 async function handleSubmitContact() {
     const name = contactName.value.trim();
     const phone = contactPhone.value.trim();
@@ -183,6 +184,7 @@ async function handleSubmitContact() {
     goToStep3();
 }
 
+// 「入力せずに閉じる」ボタン - ここでAPI呼び出し（相談あり、連絡先なし）
 async function handleSkipContact() {
     try {
         await sendToApi(lastResult, null, null, '相談希望');
