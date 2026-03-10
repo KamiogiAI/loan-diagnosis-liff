@@ -152,7 +152,7 @@ async def send_diagnosis_result(
     診断完了後にカードを送信し、ユーザーが「結果を見る」をタップするまで結果は送らない
     """
     # 診断完了カードを送信
-    card_message = get_result_card_message(line_user_id)
+    card_message = get_result_card_message()
     return await _send_push_message(line_user_id, [card_message])
 
 

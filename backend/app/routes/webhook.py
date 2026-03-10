@@ -47,8 +47,12 @@ async def handle_webhook(
     """
     body = await request.body()
     
-    # 署名検証
-    if x_line_signature and not verify_signature(body, x_line_signature):
+    # 署名検証（本番環境では必須）
+    if not x_line_signature:
+        logger.warning("No X-Line-Signature header, rejecting request")
+        raise HTTPException(status_code=400, detail="Missing signature")
+    
+    if not verify_signature(body, x_line_signature):
         raise HTTPException(status_code=400, detail="Invalid signature")
     
     try:
@@ -65,6 +69,8 @@ async def handle_webhook(
         
         return {"status": "ok"}
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Webhook error: {e}")
         # LINEには200を返す（リトライ防止）
@@ -87,9 +93,9 @@ async def handle_message_event(event: dict):
     if not user_id:
         return
     
-    # キーワード検知
-    keywords_result = ["結果を見る", "結果", "診断結果"]
-    keywords_consult = ["詳細希望", "相談希望", "相談"]
+    # キーワード検知（完全一致のみ）
+    keywords_result = ["結果を見る"]
+    keywords_consult = ["詳細希望", "相談希望"]
     
     if text in keywords_result:
         # 診断結果を送信

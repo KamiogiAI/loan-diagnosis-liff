@@ -7,40 +7,38 @@ DIAGNOSIS_URL = "https://loan.free-up.jp"
 
 
 def get_diagnosis_card_message() -> dict:
-    """診断開始カードのFlex Message"""
+    """診断開始カードのFlex Message（画像なし版）"""
     return {
         "type": "flex",
         "altText": "住宅ローン簡易診断",
         "contents": {
             "type": "bubble",
-            "hero": {
-                "type": "image",
-                "url": "https://loan.free-up.jp/images/diagnosis-banner.png",
-                "size": "full",
-                "aspectRatio": "20:13",
-                "aspectMode": "cover",
-                "action": {
-                    "type": "uri",
-                    "uri": DIAGNOSIS_URL
-                }
-            },
             "body": {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
                     {
                         "type": "text",
+                        "text": "🏠",
+                        "size": "xxl",
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
                         "text": "住宅ローン簡易診断",
                         "weight": "bold",
                         "size": "xl",
-                        "color": "#1a1a1a"
+                        "color": "#1a1a1a",
+                        "align": "center",
+                        "margin": "md"
                     },
                     {
                         "type": "text",
                         "text": "あなたの借入可能額を簡単診断！",
                         "size": "sm",
                         "color": "#666666",
-                        "margin": "md",
+                        "margin": "lg",
+                        "align": "center",
                         "wrap": True
                     },
                     {
@@ -48,7 +46,8 @@ def get_diagnosis_card_message() -> dict:
                         "text": "約1分で完了します",
                         "size": "xs",
                         "color": "#999999",
-                        "margin": "md"
+                        "margin": "md",
+                        "align": "center"
                     }
                 ]
             },
@@ -75,7 +74,7 @@ def get_diagnosis_card_message() -> dict:
     }
 
 
-def get_result_card_message(user_id: str) -> dict:
+def get_result_card_message() -> dict:
     """診断完了後の結果確認カードのFlex Message"""
     return {
         "type": "flex",
