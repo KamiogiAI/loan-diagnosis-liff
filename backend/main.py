@@ -6,25 +6,35 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from app.routes import diagnose, admin
+from app.routes import diagnose, admin, webhook
 
 load_dotenv()
 
 app = FastAPI(
     title="住宅ローン簡易診断API",
     description="LINE LIFF向け住宅ローン診断バックエンドAPI",
-    version="1.0.0"
+    version="1.1.0"
 )
+
+# 許可するオリジン
+ALLOWED_ORIGINS = [
+    "https://liff.line.me",
+    "https://kamiogiai.github.io",
+    "https://loan.free-up.jp",
+    "https://loan-diagnosis-freeup.web.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:5500",
+]
+
+# 環境変数から追加のオリジンを取得
+extra_origins = os.getenv("ALLOWED_ORIGINS", "")
+if extra_origins:
+    ALLOWED_ORIGINS.extend([o.strip() for o in extra_origins.split(",") if o.strip()])
 
 # CORS設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://liff.line.me",
-        "https://kamiogiai.github.io",
-        "http://localhost:3000",
-        "http://127.0.0.1:5500",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,6 +43,7 @@ app.add_middleware(
 # ルーター登録
 app.include_router(diagnose.router, prefix="/api", tags=["診断"])
 app.include_router(admin.router, prefix="/api/admin", tags=["管理画面"])
+app.include_router(webhook.router, prefix="/api", tags=["Webhook"])
 
 
 @app.get("/health")
@@ -48,7 +59,7 @@ async def health_check():
 @app.get("/")
 async def root():
     """ルート"""
-    return {"message": "住宅ローン簡易診断API", "version": "1.0.0"}
+    return {"message": "住宅ローン簡易診断API", "version": "1.1.0"}
 
 
 if __name__ == "__main__":
