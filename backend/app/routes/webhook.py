@@ -1,0 +1,118 @@
+"""
+LINE Webhook API
+LINEからのメッセージを受信して処理
+"""
+import os
+import hashlib
+import hmac
+import base64
+import logging
+from fastapi import APIRouter, Request, HTTPException, Header
+from app.services.firestore import FirestoreService
+from app.services.line_messaging import (
+    send_diagnosis_card,
+    send_diagnosis_result_by_user_id
+)
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
+
+
+def verify_signature(body: bytes, signature: str) -> bool:
+    """LINE署名を検証"""
+    if not LINE_CHANNEL_SECRET:
+        logger.warning("LINE_CHANNEL_SECRET not set, skipping signature verification")
+        return True
+    
+    hash_value = hmac.new(
+        LINE_CHANNEL_SECRET.encode("utf-8"),
+        body,
+        hashlib.sha256
+    ).digest()
+    
+    expected_signature = base64.b64encode(hash_value).decode("utf-8")
+    return hmac.compare_digest(signature, expected_signature)
+
+
+@router.post("/webhook")
+async def handle_webhook(
+    request: Request,
+    x_line_signature: str = Header(None, alias="X-Line-Signature")
+):
+    """
+    LINE Webhookエンドポイント
+    「結果を見る」などのメッセージを検知して診断結果を送信
+    """
+    body = await request.body()
+    
+    # 署名検証
+    if x_line_signature and not verify_signature(body, x_line_signature):
+        raise HTTPException(status_code=400, detail="Invalid signature")
+    
+    try:
+        data = await request.json()
+        events = data.get("events", [])
+        
+        for event in events:
+            event_type = event.get("type")
+            
+            if event_type == "message":
+                await handle_message_event(event)
+            elif event_type == "follow":
+                await handle_follow_event(event)
+        
+        return {"status": "ok"}
+    
+    except Exception as e:
+        logger.error(f"Webhook error: {e}")
+        # LINEには200を返す（リトライ防止）
+        return {"status": "ok"}
+
+
+async def handle_message_event(event: dict):
+    """メッセージイベントを処理"""
+    message = event.get("message", {})
+    message_type = message.get("type")
+    
+    if message_type != "text":
+        return
+    
+    text = message.get("text", "").strip()
+    source = event.get("source", {})
+    user_id = source.get("userId", "")
+    reply_token = event.get("replyToken", "")
+    
+    if not user_id:
+        return
+    
+    # キーワード検知
+    keywords_result = ["結果を見る", "結果", "診断結果"]
+    keywords_consult = ["詳細希望", "相談希望", "相談"]
+    
+    if text in keywords_result:
+        # 診断結果を送信
+        await send_diagnosis_result_by_user_id(user_id, reply_token)
+    elif text in keywords_consult:
+        # 相談希望として記録＆連絡
+        fs = FirestoreService()
+        existing = fs.check_duplicate(user_id)
+        if existing:
+            fs.update_diagnosis(existing["id"], {"consultType": "相談希望"})
+        # 相談希望メッセージを送信
+        from app.services.line_messaging import send_consult_response
+        await send_consult_response(user_id, reply_token)
+
+
+async def handle_follow_event(event: dict):
+    """友だち追加イベントを処理"""
+    source = event.get("source", {})
+    user_id = source.get("userId", "")
+    reply_token = event.get("replyToken", "")
+    
+    if not user_id:
+        return
+    
+    # 友だち追加時は診断カードを送信
+    await send_diagnosis_card(user_id, reply_token)
