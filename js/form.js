@@ -208,16 +208,16 @@ async function handleSubmitContact() {
         return;
     }
     
-    savedContactName = name;
-    savedContactPhone = phone;
-    savedConsultType = '相談希望';
-    goToStep3();
+    // API送信→閉じる
+    await sendToApiSafe(lastResult, name, phone, '相談希望');
+    closeLiff();
 }
 
 // 「入力せずに閉じる」ボタン（step2）
 async function handleSkipContact() {
-    savedConsultType = '相談希望';
-    goToStep3();
+    // API送信→閉じる
+    await sendToApiSafe(lastResult, null, null, '相談希望');
+    closeLiff();
 }
 
 // 「閉じる」ボタン（step3）- ここでAPI呼び出し
