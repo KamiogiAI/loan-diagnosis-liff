@@ -176,11 +176,10 @@ function goToStep3() {
 
 // 「閉じる」ボタン（step1）
 async function handleCloseOnly() {
-    // 先に閉じる
-    closeLiff();
-    // 閉じた後にAPI送信（非同期）
     savedConsultType = '結果だけ';
-    sendToApiSafe(lastResult, null, null, '結果だけ');
+    // API送信完了を待ってから閉じる
+    await sendToApiSafe(lastResult, null, null, '結果だけ');
+    closeLiff();
 }
 
 // 安全なAPI送信（エラーでも止まらない）
