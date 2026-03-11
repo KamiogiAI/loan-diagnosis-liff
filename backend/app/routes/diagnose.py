@@ -84,6 +84,18 @@ async def diagnose(
         # 重複チェック
         existing = fs.check_duplicate(input_data.lineUserId)
         if existing:
+            # 連絡先情報があれば更新
+            if input_data.contactName or input_data.contactPhone:
+                update_data = {}
+                if input_data.contactName:
+                    update_data["contactName"] = input_data.contactName
+                if input_data.contactPhone:
+                    update_data["contactPhone"] = input_data.contactPhone
+                if input_data.consultType:
+                    update_data["consultType"] = input_data.consultType
+                if update_data:
+                    fs.update_diagnosis(existing["id"], update_data)
+            
             return {
                 "success": True,
                 "duplicate": True,
