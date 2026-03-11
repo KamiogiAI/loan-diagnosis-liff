@@ -35,6 +35,7 @@ class DiagnosisInput(BaseModel):
     totalDebt: float = Field(..., ge=0, description="他社借入合計（万円）")
     monthlyPayment: float = Field(..., ge=0, description="月々の返済額（万円）")
     yearsEmployed: int = Field(..., ge=0, description="勤続年数")
+    borrowableAmount: Optional[int] = Field(0, ge=0, description="借入可能額（円）")
     contactName: Optional[str] = Field("", description="連絡先名前")
     contactPhone: Optional[str] = Field("", description="連絡先電話番号")
     consultType: Optional[str] = Field("", description="選択肢（結果だけ/詳細希望）")
