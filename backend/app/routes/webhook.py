@@ -116,7 +116,7 @@ async def handle_message_event(event: dict):
 async def handle_follow_event_delayed(event: dict):
     """友だち追加イベントを処理（5秒遅延）"""
     # 挨拶メッセージの後に表示されるよう5秒待つ
-    await asyncio.sleep(5)
+    await asyncio.sleep(1)
     
     source = event.get("source", {})
     user_id = source.get("userId", "")
