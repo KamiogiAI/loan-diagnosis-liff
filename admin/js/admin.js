@@ -134,10 +134,10 @@ async function loadStats() {
     try {
         const res = await fetch(`${API_ENDPOINT}/api/admin/stats`, { headers: { 'Authorization': `Bearer ${authToken}` } });
         const d = await res.json();
-        statTotal.textContent = d.total || 0;
-        statToday.textContent = d.today || 0;
-        statPending.textContent = d.byStatus?.['未連絡'] || 0;
-        statContacted.textContent = d.byStatus?.['連絡済み'] || 0;
+        statTotal.textContent = d.stats?.total || 0;
+        statToday.textContent = d.stats?.today || 0;
+        statPending.textContent = d.stats?.byStatus?.['未連絡'] || 0;
+        statContacted.textContent = d.stats?.byStatus?.['連絡済み'] || 0;
     } catch (e) { console.error(e); }
 }
 

@@ -54,8 +54,8 @@ def send_notification_email(diagnosis_data: dict) -> bool:
         <li><strong>年収:</strong> {input_data.get('incomeRange', '不明')}</li>
         <li><strong>年齢:</strong> {input_data.get('age', '不明')}歳</li>
         <li><strong>雇用形態:</strong> {input_data.get('employmentType', '不明')}</li>
-        <li><strong>他社借入合計:</strong> {input_data.get('totalDebt', 0)}万円</li>
-        <li><strong>月々の返済額:</strong> {input_data.get('monthlyPayment', 0)}万円</li>
+        <li><strong>他社借入合計:</strong> {int(input_data.get('totalDebt', 0) / 10000)}万円</li>
+        <li><strong>月々の返済額:</strong> {int(input_data.get('monthlyPayment', 0) / 10000)}万円</li>
         <li><strong>勤続年数:</strong> {input_data.get('yearsEmployed', 0)}年</li>
     </ul>
     

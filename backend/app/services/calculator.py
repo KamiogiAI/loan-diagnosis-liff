@@ -46,7 +46,7 @@ def calculate_borrowable_amount(
         計算結果のdict
     """
     # 返済負担率（年収400万未満: 30%, 400万以上: 35%）
-    ratio = 0.30 if income < 4_000_000 else 0.35
+    ratio = 0.35  # 一律35%
     
     # 返済期間（35年 or 80歳-年齢 の短い方）
     loan_period = min(35, 80 - age)
@@ -73,8 +73,8 @@ def calculate_borrowable_amount(
             "loanPeriod": loan_period
         }
     
-    # 他社年間返済額（万円→円に変換）
-    annual_other_payment = monthly_payment * 10000 * 12
+    # 他社年間返済額（円単位で受け取り済み）
+    annual_other_payment = monthly_payment * 12
     
     # 年間返済可能額
     available_annual = income * ratio - annual_other_payment
