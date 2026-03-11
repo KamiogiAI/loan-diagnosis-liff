@@ -177,8 +177,20 @@ function goToStep3() {
 // 「閉じる」ボタン（step1）
 async function handleCloseOnly() {
     savedConsultType = '結果だけ';
-    goToStep3();
+    // API送信は非同期で行い、即座に閉じる
+    sendToApiSafe(lastResult, null, null, '結果だけ');
+    closeLiff();
 }
+
+// 安全なAPI送信（エラーでも止まらない）
+async function sendToApiSafe(data, name, phone, consultType) {
+    try {
+        await sendToApi(data, name, phone, consultType);
+    } catch (err) {
+        console.error('API Error:', err);
+    }
+}
+
 
 // 「送信して閉じる」ボタン（step2）
 async function handleSubmitContact() {
@@ -241,11 +253,17 @@ async function sendToApi(data, name, phone, consultType) {
         headers['X-LIFF-Access-Token'] = accessToken;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
     const response = await fetch(API_ENDPOINT + '/api/diagnose', {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
         throw new Error(`API Error: ${response.status}`);
