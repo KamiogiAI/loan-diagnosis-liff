@@ -273,9 +273,11 @@ async function sendToApi(data, name, phone, consultType) {
 }
 
 function closeLiff() {
+    alert('閉じます');
     if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
         liff.closeWindow();
     } else {
+        alert('LIFF外です');
         window.close();
     }
 }
