@@ -102,7 +102,7 @@ async function handleSubmit(e) {
             }
         }
 
-        const result = calculateBorrowableAmount(formData.income, formData.age, formData.monthlyPayment * 10000);
+        const result = calculateBorrowableAmount(formData.income, formData.age, formData.monthlyPayment);
         
         if (!result.success) {
             alert(result.error || '計算できませんでした');
@@ -151,8 +151,8 @@ function getFormData() {
         incomeRange,
         age: parseInt(document.getElementById('age').value) || 0,
         employmentType: document.querySelector('input[name="employment"]:checked')?.value || '',
-        totalDebt: parseInt(document.getElementById('total-debt').value) || 0,
-        monthlyPayment: parseInt(document.getElementById('monthly-payment').value) || 0,
+        totalDebt: (parseInt(document.getElementById('total-debt').value) || 0) * 10000,
+        monthlyPayment: (parseInt(document.getElementById('monthly-payment').value) || 0) * 10000,
         yearsEmployed: parseInt(document.getElementById('years-employed').value) || 0
     };
 }
