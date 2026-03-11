@@ -173,3 +173,5 @@ class FirestoreService:
         except Exception as e:
             print(f"Error deleting diagnosis: {e}")
             raise e
+
+
