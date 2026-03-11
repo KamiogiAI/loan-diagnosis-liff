@@ -8,6 +8,7 @@ import hmac
 import base64
 import logging
 import asyncio
+import time
 from fastapi import APIRouter, Request, HTTPException, Header
 from app.services.firestore import FirestoreService
 from app.services.line_messaging import (
@@ -66,8 +67,8 @@ async def handle_webhook(
             if event_type == "message":
                 await handle_message_event(event)
             elif event_type == "follow":
-                # 友だち追加時は非同期で遅延送信
-                asyncio.create_task(handle_follow_event_delayed(event))
+                # 友だち追加時は非同期で処理（遅延なし）
+                asyncio.create_task(handle_follow_event(event))
         
         return {"status": "ok"}
     
@@ -113,10 +114,9 @@ async def handle_message_event(event: dict):
         await send_consult_response(user_id, reply_token)
 
 
-async def handle_follow_event_delayed(event: dict):
-    """友だち追加イベントを処理（5秒遅延）"""
-    # 挨拶メッセージの後に表示されるよう5秒待つ
-    await asyncio.sleep(1)
+async def handle_follow_event(event: dict):
+    """友だち追加イベントを処理"""
+    start = time.time()
     
     source = event.get("source", {})
     user_id = source.get("userId", "")
@@ -124,5 +124,8 @@ async def handle_follow_event_delayed(event: dict):
     if not user_id:
         return
     
-    # 友だち追加時は診断カードを送信（reply_tokenは期限切れなのでpushで送信）
+    # 友だち追加時は診断カードを送信
     await send_diagnosis_card(user_id, reply_token="")
+    
+    elapsed = time.time() - start
+    logger.info(f"Follow event processed in {elapsed:.2f}s for user {user_id[:8]}...")
