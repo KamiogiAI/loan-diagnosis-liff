@@ -719,6 +719,26 @@ body {
     .modal-footer {
         flex-direction: column;
     }
+
+    /* 設定画面のフォームを縦並びに */
+    .add-form {
+        flex-direction: column;
+    }
+
+    .add-form .input,
+    .add-form .btn-primary {
+        width: 100%;
+    }
+
+    /* タブをスクロール可能に */
+    .tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab {
+        white-space: nowrap;
+    }
 }
 
 @media (max-width: 480px) {
