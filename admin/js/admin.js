@@ -39,6 +39,9 @@ function init() {
     document.getElementById('modal-close').addEventListener('click', closeModal);
     document.getElementById('btn-cancel').addEventListener('click', closeModal);
     document.getElementById('btn-save').addEventListener('click', saveDetail);
+    document.getElementById('btn-delete').addEventListener('click', () => {
+        if (currentDiagnosis) deleteDiagnosis(currentDiagnosis.id);
+    });
     
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -339,9 +342,31 @@ async function changePassword() {
     } catch (e) { alert('エラー'); }
 }
 
+
+async function deleteDiagnosis(id) {
+    if (!confirm('この診断データを削除しますか？\nこの操作は取り消せません。')) return;
+    try {
+        const res = await fetch(`${API_ENDPOINT}/api/admin/diagnoses/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+            alert('削除しました');
+            closeModal();
+            loadData();
+        } else {
+            const d = await res.json();
+            alert(d.detail || '削除失敗');
+        }
+    } catch (e) {
+        alert('エラー');
+    }
+}
+
 function formatDate(s) { if (!s) return '-'; return new Date(s).toLocaleString('ja-JP'); }
 function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 window.openDetail = openDetail;
 window.deleteEmail = deleteEmail;
 window.deleteUser = deleteUser;
+window.deleteDiagnosis = deleteDiagnosis;
 document.addEventListener('DOMContentLoaded', init);

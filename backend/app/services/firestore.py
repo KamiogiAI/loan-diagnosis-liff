@@ -164,3 +164,12 @@ class FirestoreService:
             "byStatus": status_count,
             "averageBorrowable": avg_borrowable
         }
+
+    def delete_diagnosis(self, diagnosis_id: str) -> bool:
+        """診断データを削除"""
+        try:
+            self.db.collection("diagnoses").document(diagnosis_id).delete()
+            return True
+        except Exception as e:
+            print(f"Error deleting diagnosis: {e}")
+            raise e
