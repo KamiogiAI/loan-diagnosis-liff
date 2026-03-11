@@ -763,3 +763,22 @@ body {
 /* 希望タイプ */
 .consult-yes { color: #4CAF50; font-weight: 600; }
 .consult-no { color: #999; }
+
+/* 削除ボタン（モーダル用） */
+.modal-footer .btn-danger {
+    flex: none;
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    margin-left: auto;
+    transition: background 0.2s;
+}
+
+.modal-footer .btn-danger:hover {
+    background: #c82333;
+}
