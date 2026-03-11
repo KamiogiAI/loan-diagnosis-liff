@@ -11,6 +11,7 @@ from app.services.flex_messages import (
     get_consult_response_message,
     get_diagnosis_result_message
 )
+from app.services.settings import SettingsService
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +142,16 @@ async def _send_reply_message(reply_token: str, messages: list) -> bool:
         return False
 
 
+def _get_diagnosis_card_image_url() -> str:
+    """診断開始カードの画像URLを取得"""
+    try:
+        settings = SettingsService()
+        return settings.get_card_image("diagnosis_start") or ""
+    except Exception as e:
+        logger.error(f"Failed to get card image URL: {e}")
+        return ""
+
+
 async def send_diagnosis_result(
     line_user_id: str,
     borrowable_amount: int,
@@ -167,7 +178,8 @@ async def send_diagnosis_result_by_user_id(user_id: str, reply_token: str = "") 
     
     if not diagnosis:
         # 診断データがない場合は診断を促す
-        card_message = get_diagnosis_card_message()
+        image_url = _get_diagnosis_card_image_url()
+        card_message = get_diagnosis_card_message(image_url)
         if reply_token:
             return await _send_reply_message(reply_token, [card_message])
         else:
@@ -192,7 +204,8 @@ async def send_diagnosis_result_by_user_id(user_id: str, reply_token: str = "") 
 
 async def send_diagnosis_card(user_id: str, reply_token: str = "") -> bool:
     """診断開始カードを送信（友だち追加時など）"""
-    card_message = get_diagnosis_card_message()
+    image_url = _get_diagnosis_card_image_url()
+    card_message = get_diagnosis_card_message(image_url)
     
     if reply_token:
         return await _send_reply_message(reply_token, [card_message])

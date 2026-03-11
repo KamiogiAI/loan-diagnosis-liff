@@ -37,6 +37,7 @@
             <div class="tabs">
                 <button class="tab active" data-tab="diagnoses">診断履歴</button>
                 <button class="tab" data-tab="emails">通知先設定</button>
+                <button class="tab" data-tab="images">画像設定</button>
                 <button class="tab" data-tab="users">ユーザー管理</button>
             </div>
 
@@ -87,6 +88,23 @@
                         <button id="btn-add-email" class="btn-primary">追加</button>
                     </div>
                     <ul id="email-list" class="item-list"></ul>
+                </div>
+            </main>
+
+            <main id="tab-images" class="content tab-content">
+                <div class="settings-card">
+                    <h2>🖼️ カード画像設定</h2>
+                    <p class="hint">LINEで送信するカードの画像を設定します。ImgurやGoogleドライブの直接リンクを使用してください。</p>
+                    
+                    <div class="image-setting">
+                        <h3>診断開始カードの画像</h3>
+                        <p class="hint">友だち追加時に送信されるカードの背景画像です。推奨サイズ: 1040x585px（比率 20:13）</p>
+                        <div class="add-form">
+                            <input type="url" id="diagnosis-start-image" class="input" placeholder="画像URL（Imgur, Googleドライブ等）">
+                            <button id="btn-save-diagnosis-image" class="btn-primary">保存</button>
+                        </div>
+                        <div id="diagnosis-image-preview" class="image-preview"></div>
+                    </div>
                 </div>
             </main>
 

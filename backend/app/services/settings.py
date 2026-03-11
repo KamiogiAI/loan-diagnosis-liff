@@ -20,6 +20,7 @@ class SettingsService:
         if not doc.exists:
             self.settings_ref.set({
                 "notification_emails": [],
+                "card_images": {},
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             })
@@ -54,6 +55,43 @@ class SettingsService:
         emails.remove(email)
         self.settings_ref.update({
             "notification_emails": emails,
+            "updated_at": datetime.utcnow()
+        })
+        return True
+    
+    # ========== カード画像設定 ==========
+    
+    def get_card_images(self) -> dict:
+        """カード画像設定を取得"""
+        self._init_settings()
+        doc = self.settings_ref.get()
+        return doc.to_dict().get("card_images", {})
+    
+    def get_card_image(self, key: str) -> Optional[str]:
+        """特定のカード画像URLを取得"""
+        images = self.get_card_images()
+        return images.get(key)
+    
+    def set_card_image(self, key: str, url: str) -> bool:
+        """カード画像URLを設定"""
+        self._init_settings()
+        images = self.get_card_images()
+        images[key] = url
+        self.settings_ref.update({
+            "card_images": images,
+            "updated_at": datetime.utcnow()
+        })
+        return True
+    
+    def remove_card_image(self, key: str) -> bool:
+        """カード画像URLを削除"""
+        self._init_settings()
+        images = self.get_card_images()
+        if key not in images:
+            return False
+        del images[key]
+        self.settings_ref.update({
+            "card_images": images,
             "updated_at": datetime.utcnow()
         })
         return True

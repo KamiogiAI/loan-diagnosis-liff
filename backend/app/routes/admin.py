@@ -242,3 +242,35 @@ async def delete_diagnosis(
         return {"success": True, "message": "削除しました"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== カード画像設定 ==========
+
+class CardImageInput(BaseModel):
+    key: str
+    url: str
+
+
+@router.get("/settings/card-images")
+async def get_card_images(_auth: dict = Depends(verify_token)):
+    """カード画像設定を取得"""
+    settings = SettingsService()
+    images = settings.get_card_images()
+    return {"success": True, "images": images}
+
+
+@router.post("/settings/card-images")
+async def set_card_image(input_data: CardImageInput, _auth: dict = Depends(verify_token)):
+    """カード画像URLを設定"""
+    settings = SettingsService()
+    settings.set_card_image(input_data.key, input_data.url)
+    return {"success": True, "message": "設定しました"}
+
+
+@router.delete("/settings/card-images/{key}")
+async def delete_card_image(key: str, _auth: dict = Depends(verify_token)):
+    """カード画像URLを削除"""
+    settings = SettingsService()
+    if not settings.remove_card_image(key):
+        raise HTTPException(status_code=404, detail="見つかりません")
+    return {"success": True, "message": "削除しました"}

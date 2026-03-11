@@ -2,12 +2,55 @@
 LINE Flex Message Templates
 診断完了後のカードメッセージなど
 """
+from typing import Optional
 
 DIAGNOSIS_URL = "https://loan.free-up.jp"
 
 
-def get_diagnosis_card_message() -> dict:
-    """診断開始カードのFlex Message（画像なし版）"""
+def get_diagnosis_card_message(image_url: Optional[str] = None) -> dict:
+    """診断開始カードのFlex Message"""
+    
+    # 画像がある場合はheroセクションを追加
+    if image_url:
+        return {
+            "type": "flex",
+            "altText": "住宅ローン簡易診断",
+            "contents": {
+                "type": "bubble",
+                "hero": {
+                    "type": "image",
+                    "url": image_url,
+                    "size": "full",
+                    "aspectRatio": "20:13",
+                    "aspectMode": "cover",
+                    "action": {
+                        "type": "uri",
+                        "uri": DIAGNOSIS_URL
+                    }
+                },
+                "footer": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "sm",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "style": "primary",
+                            "height": "sm",
+                            "action": {
+                                "type": "uri",
+                                "label": "診断を開始する",
+                                "uri": DIAGNOSIS_URL
+                            },
+                            "color": "#2563eb"
+                        }
+                    ],
+                    "flex": 0
+                }
+            }
+        }
+    
+    # 画像がない場合はテキストベース
     return {
         "type": "flex",
         "altText": "住宅ローン簡易診断",

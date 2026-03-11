@@ -47,6 +47,12 @@ function init() {
     document.getElementById('btn-add-email').addEventListener('click', addEmail);
     document.getElementById('btn-add-user').addEventListener('click', addUser);
     document.getElementById('btn-change-password').addEventListener('click', changePassword);
+    document.getElementById('btn-save-diagnosis-image').addEventListener('click', saveDiagnosisImage);
+    
+    // 画像URL入力時のプレビュー
+    document.getElementById('diagnosis-start-image').addEventListener('input', (e) => {
+        updateImagePreview(e.target.value, 'diagnosis-image-preview');
+    });
     
     checkSession();
 }
@@ -96,64 +102,64 @@ function switchTab(tabName) {
     
     if (tabName === 'emails') loadEmails();
     if (tabName === 'users') loadUsers();
-}
-
-function handleSearch() {
-    searchQuery = filterSearch.value.trim().toLowerCase();
-    renderTable();
+    if (tabName === 'images') loadCardImages();
 }
 
 async function loadData() {
     loadingState.classList.remove('hidden');
+    tableBody.innerHTML = '';
+    emptyState.classList.add('hidden');
     try {
-        const res = await fetch(`${API_ENDPOINT}/api/admin/diagnoses`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const params = new URLSearchParams({ limit: '200' });
+        if (searchQuery) params.set('search', searchQuery);
+        const res = await fetch(`${API_ENDPOINT}/api/admin/diagnoses?${params}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
         if (res.status === 401) { handleLogout(); return; }
         const data = await res.json();
         diagnoses = data.diagnoses || [];
-        updateStats();
+        loadStats();
         renderTable();
-    } catch (e) { alert('データ読み込み失敗'); }
-    finally { loadingState.classList.add('hidden'); }
+    } catch (e) { console.error(e); }
+    loadingState.classList.add('hidden');
 }
 
-function updateStats() {
-    const today = new Date().toISOString().split('T')[0];
-    statTotal.textContent = diagnoses.length;
-    statToday.textContent = diagnoses.filter(d => (d.createdAt || '').startsWith(today)).length;
-    statPending.textContent = diagnoses.filter(d => d.status === '未連絡').length;
-    statContacted.textContent = diagnoses.filter(d => d.status === '連絡済み').length;
+function handleSearch() {
+    searchQuery = filterSearch.value.trim();
+    loadData();
+}
+
+async function loadStats() {
+    try {
+        const res = await fetch(`${API_ENDPOINT}/api/admin/stats`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const d = await res.json();
+        statTotal.textContent = d.total || 0;
+        statToday.textContent = d.today || 0;
+        statPending.textContent = d.byStatus?.['未連絡'] || 0;
+        statContacted.textContent = d.byStatus?.['連絡済み'] || 0;
+    } catch (e) { console.error(e); }
 }
 
 function renderTable() {
-    const sf = filterStatus.value, df = filterDate.value;
+    const status = filterStatus.value;
+    const date = filterDate.value;
     let filtered = diagnoses;
-    if (sf) filtered = filtered.filter(d => d.status === sf);
-    if (df) filtered = filtered.filter(d => (d.createdAt || '').startsWith(df));
-    if (searchQuery) {
-        filtered = filtered.filter(d => {
-            const name = (d.lineDisplayName || '').toLowerCase();
-            const contactName = (d.contactName || '').toLowerCase();
-            const phone = (d.contactPhone || '').toLowerCase();
-            return name.includes(searchQuery) || contactName.includes(searchQuery) || phone.includes(searchQuery);
-        });
-    }
+    if (status) filtered = filtered.filter(d => d.status === status);
+    if (date) filtered = filtered.filter(d => d.createdAt?.startsWith(date));
     
-    if (!filtered.length) { tableBody.innerHTML = ''; emptyState.classList.remove('hidden'); return; }
+    if (filtered.length === 0) { emptyState.classList.remove('hidden'); tableBody.innerHTML = ''; return; }
     emptyState.classList.add('hidden');
     
     tableBody.innerHTML = filtered.map(d => {
-        const inp = d.input || {}, res = d.result || {};
-        const amount = res.borrowableAmountMan != null ? res.borrowableAmountMan.toLocaleString() : '-';
+        const income = d.input?.income != null ? `${(d.input.income/10000).toFixed(0)}万` : '-';
+        const amount = d.result?.borrowableAmount != null ? `${(d.result.borrowableAmount/10000).toFixed(0)}万` : '-';
         const consultType = formatConsultType(d.consultType);
-        const consultClass = (consultType === '相談希望' || consultType === '詳細希望') ? 'consult-yes' : 'consult-no';
         return `<tr>
             <td>${formatDate(d.createdAt)}</td>
-            <td>${esc(d.lineDisplayName || '不明')}</td>
-            <td>${inp.incomeRange || '-'}</td>
-            <td>${inp.age || '-'}歳</td>
-            <td><strong>${amount}万円</strong></td>
-            <td><span class="status-badge ${d.status || '未連絡'}">${d.status || '未連絡'}</span></td>
-            <td><span class="${consultClass}">${consultType}</span></td>
+            <td>${esc(d.lineDisplayName || '-')}</td>
+            <td>${income}</td>
+            <td>${d.input?.age || '-'}</td>
+            <td class="amount">${amount}</td>
+            <td><span class="status-badge status-${d.status?.replace(/\s/g,'')}">${d.status || '-'}</span></td>
+            <td>${consultType}</td>
             <td><button class="btn-detail" onclick="openDetail('${d.id}')">詳細</button></td>
         </tr>`;
     }).join('');
@@ -162,23 +168,22 @@ function renderTable() {
 function openDetail(id) {
     currentDiagnosis = diagnoses.find(d => d.id === id);
     if (!currentDiagnosis) return;
-    const inp = currentDiagnosis.input || {}, res = currentDiagnosis.result || {};
-    document.getElementById('detail-date').textContent = formatDate(currentDiagnosis.createdAt);
-    document.getElementById('detail-name').textContent = currentDiagnosis.lineDisplayName || '不明';
-    document.getElementById('detail-uid').textContent = currentDiagnosis.lineUserId || '-';
-    document.getElementById('detail-contact-name').textContent = currentDiagnosis.contactName || '-';
-    document.getElementById('detail-contact-phone').textContent = currentDiagnosis.contactPhone || '-';
-    document.getElementById('detail-consult-type').textContent = formatConsultType(currentDiagnosis.consultType);
-    document.getElementById('detail-income').textContent = inp.incomeRange || '-';
-    document.getElementById('detail-age').textContent = (inp.age || '-') + '歳';
-    document.getElementById('detail-employment').textContent = inp.employmentType || '-';
-    document.getElementById('detail-debt').textContent = (inp.totalDebt || 0) + '万円';
-    document.getElementById('detail-monthly').textContent = (inp.monthlyPayment || 0) + '万円';
-    document.getElementById('detail-years').textContent = (inp.yearsEmployed || '-') + '年';
-    const resultAmount = res.borrowableAmountMan != null ? res.borrowableAmountMan.toLocaleString() : '-';
-    document.getElementById('detail-result').textContent = resultAmount + '万円';
-    document.getElementById('detail-status-select').value = currentDiagnosis.status || '未連絡';
-    document.getElementById('detail-memo').value = currentDiagnosis.memo || '';
+    const d = currentDiagnosis;
+    document.getElementById('detail-date').textContent = formatDate(d.createdAt);
+    document.getElementById('detail-name').textContent = d.lineDisplayName || '-';
+    document.getElementById('detail-uid').textContent = d.lineUserId || '-';
+    document.getElementById('detail-contact-name').textContent = d.contactInfo?.name || '-';
+    document.getElementById('detail-contact-phone').textContent = d.contactInfo?.phone || '-';
+    document.getElementById('detail-consult-type').textContent = formatConsultType(d.consultType);
+    document.getElementById('detail-income').textContent = d.input?.income != null ? `${(d.input.income/10000).toFixed(0)}万円` : '-';
+    document.getElementById('detail-age').textContent = d.input?.age ? `${d.input.age}歳` : '-';
+    document.getElementById('detail-employment').textContent = d.input?.employmentType || '-';
+    document.getElementById('detail-debt').textContent = d.input?.existingDebt != null ? `${(d.input.existingDebt/10000).toFixed(0)}万円` : '-';
+    document.getElementById('detail-monthly').textContent = d.input?.monthlyRepayment != null ? `${(d.input.monthlyRepayment/10000).toFixed(1)}万円` : '-';
+    document.getElementById('detail-years').textContent = d.input?.yearsEmployed ? `${d.input.yearsEmployed}年` : '-';
+    document.getElementById('detail-result').textContent = d.result?.borrowableAmount != null ? `${(d.result.borrowableAmount/10000).toFixed(0)}万円` : '-';
+    document.getElementById('detail-status-select').value = d.status || '未連絡';
+    document.getElementById('detail-memo').value = d.memo || '';
     detailModal.classList.remove('hidden');
 }
 
@@ -191,10 +196,7 @@ async function saveDetail() {
             method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
             body: JSON.stringify({ status: document.getElementById('detail-status-select').value, memo: document.getElementById('detail-memo').value })
         });
-        if (res.status === 401) { handleLogout(); return; }
-        const idx = diagnoses.findIndex(d => d.id === currentDiagnosis.id);
-        if (idx !== -1) { diagnoses[idx].status = document.getElementById('detail-status-select').value; diagnoses[idx].memo = document.getElementById('detail-memo').value; }
-        updateStats(); renderTable(); closeModal();
+        if (res.ok) { closeModal(); loadData(); } else { alert('保存失敗'); }
     } catch (e) { alert('保存失敗'); }
 }
 
@@ -241,6 +243,49 @@ async function deleteEmail(email) {
         loadEmails();
     } catch (e) { alert('削除失敗'); }
 }
+
+// ========== 画像設定 ==========
+
+async function loadCardImages() {
+    try {
+        const res = await fetch(`${API_ENDPOINT}/api/admin/settings/card-images`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const data = await res.json();
+        const images = data.images || {};
+        
+        // 診断開始カード画像
+        const diagnosisImageUrl = images['diagnosis_start'] || '';
+        document.getElementById('diagnosis-start-image').value = diagnosisImageUrl;
+        updateImagePreview(diagnosisImageUrl, 'diagnosis-image-preview');
+    } catch (e) { console.error(e); }
+}
+
+function updateImagePreview(url, previewId) {
+    const preview = document.getElementById(previewId);
+    if (url) {
+        preview.innerHTML = `<img src="${esc(url)}" alt="プレビュー" style="max-width: 300px; max-height: 200px; border-radius: 8px;">`;
+    } else {
+        preview.innerHTML = '<p style="color: #999;">画像が設定されていません</p>';
+    }
+}
+
+async function saveDiagnosisImage() {
+    const url = document.getElementById('diagnosis-start-image').value.trim();
+    try {
+        const res = await fetch(`${API_ENDPOINT}/api/admin/settings/card-images`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ key: 'diagnosis_start', url: url })
+        });
+        if (res.ok) { 
+            alert('保存しました'); 
+            loadCardImages();
+        } else { 
+            const d = await res.json(); 
+            alert(d.detail || '保存失敗'); 
+        }
+    } catch (e) { alert('エラー'); }
+}
+
+// ========== ユーザー管理 ==========
 
 async function loadUsers() {
     try {
