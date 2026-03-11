@@ -196,8 +196,7 @@ def get_diagnosis_result_message(
     amount_man = borrowable_amount // 10000
     name_display = display_name if display_name else "お客"
     
-    if consult_type == "相談希望":
-        text = f"""🏠 住宅ローン診断結果
+    text = f"""🏠 住宅ローン診断結果
 
 {name_display}様
 
@@ -206,26 +205,12 @@ def get_diagnosis_result_message(
 💰 借入可能額（目安）
 約 {amount_man:,} 万円
 
-ご相談のご希望をいただきありがとうございます。
-担当者より改めてご連絡させていただきます。
-
 ※この金額はあくまで目安です。
-実際の審査結果とは異なる場合がございます。"""
-    else:
-        text = f"""🏠 住宅ローン診断結果
+実際の審査結果とは異なる場合がございます。
 
-{name_display}様
+この後スタッフよりご連絡させて頂きますのでお待ちくださいませ。
 
-診断が完了しました。
-
-💰 借入可能額（目安）
-約 {amount_man:,} 万円
-
-詳しいご相談をご希望の場合は、
-「詳細希望」とお送りください。
-
-※この金額はあくまで目安です。
-実際の審査結果とは異なる場合がございます。"""
+営業時間10:00-19:00"""
     
     return {
         "type": "text",
