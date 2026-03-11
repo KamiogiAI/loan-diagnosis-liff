@@ -279,7 +279,7 @@ async def delete_card_image(key: str, _auth: dict = Depends(verify_token)):
 @router.delete("/diagnoses/{diagnosis_id}")
 async def delete_diagnosis(
     diagnosis_id: str,
-    _user: dict = Depends(verify_admin_token)
+    _user: dict = Depends(verify_token)
 ):
     """診断データを削除（物理削除）"""
     try:
@@ -287,5 +287,5 @@ async def delete_diagnosis(
         fs.delete_diagnosis(diagnosis_id)
         return {"success": True, "message": "削除しました"}
     except Exception as e:
-        logger.error(f"Delete diagnosis error: {e}")
+        print(f"Delete diagnosis error: {e}")
         raise HTTPException(status_code=500, detail="削除に失敗しました")
