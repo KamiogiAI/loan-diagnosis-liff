@@ -10,6 +10,8 @@ from fastapi import Request, HTTPException
 ALLOWED_ORIGINS = [
     "https://liff.line.me",
     "https://kamiogiai.github.io",
+    "https://loan.free-up.jp",
+    "https://loan-diagnosis-freeup.web.app",
 ]
 
 # 開発環境用
