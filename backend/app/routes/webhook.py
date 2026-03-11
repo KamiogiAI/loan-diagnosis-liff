@@ -68,7 +68,7 @@ async def handle_webhook(
                 await handle_message_event(event)
             elif event_type == "follow":
                 # 友だち追加時は非同期で処理（遅延なし）
-                asyncio.create_task(handle_follow_event(event))
+                asyncio.create_task(handle_follow_event_delayed(event))
         
         return {"status": "ok"}
     
@@ -114,8 +114,10 @@ async def handle_message_event(event: dict):
         await send_consult_response(user_id, reply_token)
 
 
-async def handle_follow_event(event: dict):
-    """友だち追加イベントを処理"""
+async def handle_follow_event_delayed(event: dict):
+    """友だち追加イベントを処理（2秒遅延）"""
+    await asyncio.sleep(2)
+    
     start = time.time()
     
     source = event.get("source", {})
