@@ -14,10 +14,10 @@ const step2 = document.getElementById('result-step-2');
 const step3 = document.getElementById('result-step-3');
 
 const btnConsult = document.getElementById('btn-consult');
-const btnCloseOnly = document.getElementById('btn-close-only');
+// const btnCloseOnly = document.getElementById('btn-close-only'); // 削除
 const btnSubmitContact = document.getElementById('btn-submit-contact');
-const btnSkipContact = document.getElementById('btn-skip-contact');
-const btnCloseFinal = document.getElementById('btn-close-final');
+// const btnSkipContact = document.getElementById('btn-skip-contact'); // 削除
+// const btnCloseFinal = document.getElementById('btn-close-final'); // 削除
 
 const contactName = document.getElementById('contact-name');
 const contactPhone = document.getElementById('contact-phone');
@@ -31,10 +31,10 @@ function initForm() {
     incomeSelect.addEventListener('change', handleIncomeSelectChange);
     form.addEventListener('submit', handleSubmit);
     btnConsult.addEventListener('click', goToStep2);
-    btnCloseOnly.addEventListener('click', handleCloseOnly);
+    // btnCloseOnly削除
     btnSubmitContact.addEventListener('click', handleSubmitContact);
-    btnSkipContact.addEventListener('click', handleSkipContact);
-    btnCloseFinal.addEventListener('click', handleCloseFinal);
+    // btnSkipContact削除
+    // btnCloseFinal削除
 }
 
 function handleIncomeSelectChange(e) {
@@ -113,6 +113,9 @@ async function handleSubmit(e) {
         savedContactName = null;
         savedContactPhone = null;
         savedConsultType = '結果だけ';
+        
+        // 診断結果をサーバーに送信
+        await sendToApiSafe(lastResult, null, null, '結果だけ');
         
         showResult();
 
@@ -208,9 +211,9 @@ async function handleSubmitContact() {
         return;
     }
     
-    // API送信→閉じる
+    // 連絡先を送信して完了画面へ
     await sendToApiSafe(lastResult, name, phone, '相談希望');
-    closeLiff();
+    goToStep3();
 }
 
 // 「入力せずに閉じる」ボタン（step2）
