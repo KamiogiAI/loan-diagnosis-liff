@@ -1,10 +1,13 @@
+/**
+ * フォーム処理
+ */
+const API_ENDPOINT = 'https://loan-diagnosis-api-247001240932.asia-northeast1.run.app';
+
 const form = document.getElementById('diagnosis-form');
 const incomeSelect = document.getElementById('income-select');
 const incomeInputWrapper = document.getElementById('income-input-wrapper');
 const incomeInput = document.getElementById('income-input');
 const resultModal = document.getElementById('result-modal');
-const resultAmount = document.getElementById('result-amount');
-const resultDetail = document.getElementById('result-detail');
 
 const step1 = document.getElementById('result-step-1');
 const step2 = document.getElementById('result-step-2');
@@ -60,74 +63,105 @@ function handleIncomeSelectChange(e) {
 
 async function handleSubmit(e) {
     e.preventDefault();
-    
-    const formData = new FormData(form);
-    let income;
-    const incomeSelectValue = formData.get('income');
-    
-    if (incomeSelectValue === 'custom-low' || incomeSelectValue === 'custom-high') {
-        income = parseInt(incomeInput.value) * 10000;
-    } else {
-        income = parseInt(incomeSelectValue);
+    const submitBtn = form.querySelector('.btn-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '診断中...';
+
+    try {
+        const formData = getFormData();
+        
+        if (isNaN(formData.income) || formData.income <= 0) {
+            alert('年収を正しく入力してください');
+            return;
+        }
+        if (isNaN(formData.age) || formData.age < 18 || formData.age > 100) {
+            alert('年齢を正しく入力してください');
+            return;
+        }
+        if (formData.age >= 65) {
+            alert('65歳以上は返済期間が短くなるため診断できません');
+            return;
+        }
+
+        // 重複チェック
+        const profile = typeof getUserProfile === 'function' ? getUserProfile() : null;
+        const lineUserId = profile?.userId || 'unknown';
+        
+        if (lineUserId && lineUserId !== 'unknown') {
+            try {
+                const checkRes = await fetch(`${API_ENDPOINT}/api/diagnose/check/${lineUserId}`);
+                const checkData = await checkRes.json();
+                if (checkData.exists) {
+                    alert('既に診断済みです。\n診断は1回のみご利用いただけます。');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '診断する';
+                    return;
+                }
+            } catch (e) {
+                console.error('Check duplicate error:', e);
+            }
+        }
+
+        const result = calculateBorrowableAmount(formData.income, formData.age, formData.monthlyPayment * 10000);
+        
+        if (!result.success) {
+            alert(result.error || '計算できませんでした');
+            return;
+        }
+
+        lastResult = { ...formData, ...result };
+        savedContactName = null;
+        savedContactPhone = null;
+        savedConsultType = '結果だけ';
+        
+        showResult();
+
+    } catch (error) {
+        console.error('Submit error:', error);
+        alert('エラーが発生しました。もう一度お試しください。');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '診断する';
     }
-    
-    const incomeRangeMap = {
-        '3000000': '300〜400万円',
-        '4000000': '400〜500万円',
-        '5000000': '500〜600万円',
-        '6000000': '600〜700万円',
-        'custom-low': '300万円未満',
-        'custom-high': '700万円以上'
-    };
-    
-    const data = {
-        income: income,
-        incomeRange: incomeRangeMap[incomeSelectValue] || `${Math.floor(income/10000)}万円`,
-        age: parseInt(formData.get('age')),
-        employmentType: formData.get('employmentType'),
-        totalDebt: parseFloat(formData.get('existingDebt') || 0) * 10000,
-        monthlyPayment: parseFloat(formData.get('monthlyRepayment') || 0) * 10000,
-        yearsEmployed: parseInt(formData.get('yearsEmployed'))
-    };
-    
-    const result = calculateLoan(data);
-    lastResult = { ...data, ...result };
-    
-    resultAmount.textContent = `${result.borrowableAmountMan.toLocaleString()}万円`;
-    
-    const employmentMultipliers = {
-        '正社員': 1.0,
-        '契約社員': 0.9,
-        '派遣社員': 0.85,
-        '自営業': 0.8,
-        'パート・アルバイト': 0.7
-    };
-    const multiplier = employmentMultipliers[data.employmentType] || 1.0;
-    
-    let detailHtml = '<ul class="result-detail-list">';
-    detailHtml += `<li>年収: ${(data.income / 10000).toLocaleString()}万円</li>`;
-    detailHtml += `<li>年齢: ${data.age}歳</li>`;
-    detailHtml += `<li>雇用形態: ${data.employmentType}（係数: ${multiplier}）</li>`;
-    detailHtml += `<li>借入期間: ${result.loanPeriod}年</li>`;
-    detailHtml += `<li>返済比率: ${(result.repaymentRatio * 100).toFixed(0)}%</li>`;
-    if (data.totalDebt > 0) {
-        detailHtml += `<li>他社借入: ${(data.totalDebt / 10000).toLocaleString()}万円</li>`;
-    }
-    detailHtml += '</ul>';
-    resultDetail.innerHTML = detailHtml;
-    
-    showResultModal();
 }
 
-function showResultModal() {
-    resultModal.classList.remove('hidden');
+function getFormData() {
+    let income;
+    const incomeSelectValue = incomeSelect.value;
+    if (incomeSelectValue === 'custom-low' || incomeSelectValue === 'custom-high') {
+        const inputVal = parseInt(incomeInput.value);
+        income = isNaN(inputVal) ? 0 : inputVal * 10000;
+    } else {
+        income = parseInt(incomeSelectValue) || 0;
+    }
+
+    let incomeRange;
+    if (income < 3000000) incomeRange = '300万円未満';
+    else if (income < 4000000) incomeRange = '300〜400万円';
+    else if (income < 5000000) incomeRange = '400〜500万円';
+    else if (income < 6000000) incomeRange = '500〜600万円';
+    else if (income < 7000000) incomeRange = '600〜700万円';
+    else incomeRange = '700万円以上';
+
+    return {
+        income,
+        incomeRange,
+        age: parseInt(document.getElementById('age').value) || 0,
+        employmentType: document.querySelector('input[name="employment"]:checked')?.value || '',
+        totalDebt: parseInt(document.getElementById('total-debt').value) || 0,
+        monthlyPayment: parseInt(document.getElementById('monthly-payment').value) || 0,
+        yearsEmployed: parseInt(document.getElementById('years-employed').value) || 0
+    };
+}
+
+function showResult() {
     step1.classList.remove('hidden');
     step2.classList.add('hidden');
     step3.classList.add('hidden');
+    resultModal.classList.remove('hidden');
 }
 
 function goToStep2() {
-    savedConsultType = '相談希望';
     step1.classList.add('hidden');
     step2.classList.remove('hidden');
     step3.classList.add('hidden');
@@ -140,22 +174,13 @@ function goToStep3() {
     step3.classList.remove('hidden');
 }
 
-// 「閉じる」ボタン（step1）- APIを呼んでから閉じる
+// 「閉じる」ボタン（step1）
 async function handleCloseOnly() {
     savedConsultType = '結果だけ';
-    savedContactName = null;
-    savedContactPhone = null;
-    
-    // API呼び出しして閉じる
-    try {
-        await sendToApi(lastResult, savedContactName, savedContactPhone, savedConsultType);
-    } catch (err) {
-        console.error('API Error:', err);
-    }
-    closeLiff();
+    goToStep3();
 }
 
-// 「送信して相談する」ボタン（step2）
+// 「送信して閉じる」ボタン（step2）
 async function handleSubmitContact() {
     const name = contactName.value.trim();
     const phone = contactPhone.value.trim();
@@ -165,37 +190,31 @@ async function handleSubmitContact() {
         contactName.focus();
         return;
     }
-
+    if (!phone) {
+        alert('電話番号を入力してください');
+        contactPhone.focus();
+        return;
+    }
+    
     savedContactName = name;
     savedContactPhone = phone;
     savedConsultType = '相談希望';
-    
-    // API呼び出しして閉じる
-    try {
-        await sendToApi(lastResult, savedContactName, savedContactPhone, savedConsultType);
-    } catch (err) {
-        console.error('API Error:', err);
-    }
     goToStep3();
 }
 
-// 「入力せずにLINEで相談する」ボタン（step2）
+// 「入力せずに閉じる」ボタン（step2）
 async function handleSkipContact() {
-    savedContactName = null;
-    savedContactPhone = null;
     savedConsultType = '相談希望';
-    
-    // API呼び出しして閉じる
+    goToStep3();
+}
+
+// 「閉じる」ボタン（step3）- ここでAPI呼び出し
+async function handleCloseFinal() {
     try {
         await sendToApi(lastResult, savedContactName, savedContactPhone, savedConsultType);
     } catch (err) {
         console.error('API Error:', err);
     }
-    goToStep3();
-}
-
-// 「閉じる」ボタン（step3）
-async function handleCloseFinal() {
     closeLiff();
 }
 
@@ -211,25 +230,28 @@ async function sendToApi(data, name, phone, consultType) {
         totalDebt: data.totalDebt,
         monthlyPayment: data.monthlyPayment,
         yearsEmployed: data.yearsEmployed,
-        borrowableAmount: data.borrowableAmount,
-        consultType: consultType || '結果だけ',
-        contactName: name || null,
-        contactPhone: phone || null
+        contactName: name || '',
+        contactPhone: phone || '',
+        consultType: consultType || '結果だけ'
     };
 
-    const response = await fetch('https://loan-diagnosis-api-247001240932.asia-northeast1.run.app/api/diagnose', {
+    const accessToken = typeof getLiffAccessToken === 'function' ? getLiffAccessToken() : null;
+    const headers = { 'Content-Type': 'application/json' };
+    if (accessToken) {
+        headers['X-LIFF-Access-Token'] = accessToken;
+    }
+
+    const response = await fetch(API_ENDPOINT + '/api/diagnose', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: headers,
         body: JSON.stringify(payload)
     });
-
+    
     if (!response.ok) {
         throw new Error(`API Error: ${response.status}`);
     }
-
-    return response.json();
+    
+    return await response.json();
 }
 
 function closeLiff() {
