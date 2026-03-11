@@ -177,14 +177,6 @@ function goToStep3() {
     step3.classList.remove('hidden');
 }
 
-// 「閉じる」ボタン（step1）
-async function handleCloseOnly() {
-    savedConsultType = '結果だけ';
-    // API送信完了を待ってから閉じる
-    await sendToApiSafe(lastResult, null, null, '結果だけ');
-    closeLiff();
-}
-
 // 安全なAPI送信（エラーでも止まらない）
 async function sendToApiSafe(data, name, phone, consultType) {
     try {
@@ -216,23 +208,7 @@ async function handleSubmitContact() {
     goToStep3();
 }
 
-// 「入力せずに閉じる」ボタン（step2）
-async function handleSkipContact() {
-    // API送信→閉じる
-    await sendToApiSafe(lastResult, null, null, '相談希望');
-    closeLiff();
-}
-
-// 「閉じる」ボタン（step3）- ここでAPI呼び出し
-async function handleCloseFinal() {
-    try {
-        await sendToApi(lastResult, savedContactName, savedContactPhone, savedConsultType);
-    } catch (err) {
-        console.error('API Error:', err);
-    }
-    closeLiff();
-}
-
+// 以下は削除されたボタン用（未使用）
 async function sendToApi(data, name, phone, consultType) {
     const profile = typeof getUserProfile === 'function' ? getUserProfile() : null;
     const payload = {
@@ -245,6 +221,7 @@ async function sendToApi(data, name, phone, consultType) {
         totalDebt: data.totalDebt,
         monthlyPayment: data.monthlyPayment,
         yearsEmployed: data.yearsEmployed,
+        borrowableAmount: data.borrowableAmount || 0,
         contactName: name || '',
         contactPhone: phone || '',
         consultType: consultType || '結果だけ'
@@ -276,11 +253,9 @@ async function sendToApi(data, name, phone, consultType) {
 }
 
 function closeLiff() {
-    alert('閉じます');
     if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
         liff.closeWindow();
     } else {
-        alert('LIFF外です');
         window.close();
     }
 }
