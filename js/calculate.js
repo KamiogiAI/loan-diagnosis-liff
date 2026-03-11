@@ -45,7 +45,7 @@ function calculateBorrowableAmount(income, age, monthlyPayment) {
     }
 
     // 返済負担率
-    const repaymentRatio = income < 4000000 ? 0.30 : 0.35;
+    const repaymentRatio = 0.35;  // 一律35%
 
     // 返済期間（35年 or 80歳-年齢 の短い方）
     const maxPeriodByAge = 80 - age;
