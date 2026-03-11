@@ -110,3 +110,33 @@ function formatAmountInMan(amount) {
 function formatAmount(amount) {
     return amount.toLocaleString('ja-JP');
 }
+
+/**
+ * 借入可能額を計算（form.jsから呼び出し用ラッパー）
+ * 
+ * @param {object} data - 入力データ
+ * @returns {object} 計算結果
+ */
+function calculateLoan(data) {
+    const result = calculateBorrowableAmount(
+        data.income,
+        data.age,
+        data.monthlyPayment || 0
+    );
+    
+    if (!result.success) {
+        return {
+            borrowableAmount: 0,
+            borrowableAmountMan: 0,
+            repaymentRatio: 0,
+            loanPeriod: 0
+        };
+    }
+    
+    return {
+        borrowableAmount: result.borrowableAmount,
+        borrowableAmountMan: Math.floor(result.borrowableAmount / 10000),
+        repaymentRatio: result.repaymentRatio,
+        loanPeriod: result.loanPeriod
+    };
+}
