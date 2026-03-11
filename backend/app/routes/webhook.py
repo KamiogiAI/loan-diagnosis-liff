@@ -116,7 +116,7 @@ async def handle_message_event(event: dict):
 
 async def handle_follow_event_delayed(event: dict):
     """友だち追加イベントを処理（2秒遅延）"""
-    await asyncio.sleep(2)
+    # 遅延なし
     
     start = time.time()
     
