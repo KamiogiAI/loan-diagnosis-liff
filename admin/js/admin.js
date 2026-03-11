@@ -172,14 +172,19 @@ function openDetail(id) {
     document.getElementById('detail-date').textContent = formatDate(d.createdAt);
     document.getElementById('detail-name').textContent = d.lineDisplayName || '-';
     document.getElementById('detail-uid').textContent = d.lineUserId || '-';
-    document.getElementById('detail-contact-name').textContent = d.contactInfo?.name || '-';
-    document.getElementById('detail-contact-phone').textContent = d.contactInfo?.phone || '-';
+    // 名前と電話番号: contactInfo ではなく contactName/contactPhone を使用
+    document.getElementById('detail-contact-name').textContent = d.contactName || '-';
+    document.getElementById('detail-contact-phone').textContent = d.contactPhone || '-';
     document.getElementById('detail-consult-type').textContent = formatConsultType(d.consultType);
     document.getElementById('detail-income').textContent = d.input?.income != null ? `${(d.input.income/10000).toFixed(0)}万円` : '-';
     document.getElementById('detail-age').textContent = d.input?.age ? `${d.input.age}歳` : '-';
     document.getElementById('detail-employment').textContent = d.input?.employmentType || '-';
-    document.getElementById('detail-debt').textContent = d.input?.existingDebt != null ? `${(d.input.existingDebt/10000).toFixed(0)}万円` : '-';
-    document.getElementById('detail-monthly').textContent = d.input?.monthlyRepayment != null ? `${(d.input.monthlyRepayment/10000).toFixed(1)}万円` : '-';
+    // 他社借入: totalDebt を使用、0も表示
+    const debt = d.input?.totalDebt;
+    document.getElementById('detail-debt').textContent = debt != null ? `${(debt/10000).toFixed(0)}万円` : '-';
+    // 月返済: monthlyPayment を使用、0も表示
+    const monthly = d.input?.monthlyPayment;
+    document.getElementById('detail-monthly').textContent = monthly != null ? `${(monthly/10000).toFixed(1)}万円` : '-';
     document.getElementById('detail-years').textContent = d.input?.yearsEmployed ? `${d.input.yearsEmployed}年` : '-';
     document.getElementById('detail-result').textContent = d.result?.borrowableAmount != null ? `${(d.result.borrowableAmount/10000).toFixed(0)}万円` : '-';
     document.getElementById('detail-status-select').value = d.status || '未連絡';
